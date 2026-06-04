@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+
+  --color-paper: #faf6ee;
+  --color-paper-2: #f3ecdd;
+  --color-card: #ffffff;
+  --color-ink: #14131a;
+  --color-muted: #6b6675;
+  --color-line: #e5dcc9;
+  --color-violet: #5b3df5;
+  --color-violet-ink: #3a23c7;
+  --color-violet-soft: #ece7ff;
+  --color-coral: #ff5a3c;
+  --color-coral-ink: #d9381c;
+  --color-coral-soft: #ffe6df;
+  --color-lime: #d6fb5a;
+  --color-lime-ink: #5c7000;
+  --color-mint: #1f9d6b;
+
+  --shadow-card: 0 18px 42px -28px rgba(20, 19, 26, 0.36);
+  --shadow-soft: 0 18px 34px -20px rgba(20, 19, 26, 0.46);
+  --shadow-coral: 0 16px 30px -16px rgba(255, 90, 60, 0.72);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body), sans-serif;
+  background:
+    linear-gradient(90deg, rgba(20, 19, 26, 0.035) 1px, transparent 1px),
+    linear-gradient(rgba(20, 19, 26, 0.035) 1px, transparent 1px),
+    var(--color-paper);
+  background-size: 36px 36px;
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+a {
+  cursor: pointer;
+}
+
+::selection {
+  background: var(--color-lime);
+  color: var(--color-ink);
+}

@@ -1,0 +1,106 @@
+import { Bot, Download, ExternalLink, Link2, Megaphone, PackageCheck, Store, TrendingUp } from "lucide-react";
+import { invoiceHref, money, type Order } from "@/lib/orders";
+
+const statusTone: Record<Order["status"], string> = {
+  "Brief received": "bg-violet-soft text-violet-ink",
+  "In outreach": "bg-ink text-paper",
+  "Content review": "bg-coral-soft text-coral-ink",
+  Publishing: "bg-lime text-lime-ink",
+  Completed: "bg-mint text-white"
+};
+
+const categoryIcons = {
+  "Link Building": Link2,
+  "Digital PR": Megaphone,
+  "AI SEO": Bot,
+  "SEO Reseller": Store,
+  Grow: TrendingUp
+} satisfies Record<Order["category"], typeof PackageCheck>;
+
+export function OrderCard({ order }: { order: Order }) {
+  const Icon = categoryIcons[order.category];
+  const invoiceId = order.status === "Completed" ? order.invoiceId : undefined;
+
+  return (
+    <article className="rounded-2xl border border-line bg-card p-5 shadow-card transition hover:-translate-y-0.5 hover:border-ink">
+      <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="grid size-11 place-items-center rounded-xl bg-violet-soft text-violet">
+              <Icon className="size-5" />
+            </span>
+            <div>
+              <p className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-muted">
+                {order.id} · {order.category}
+              </p>
+              <h2 className="mt-1 font-display text-2xl font-black tracking-tight">{order.service}</h2>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 text-sm text-muted sm:grid-cols-3">
+            <div>
+              <span className="block font-bold text-ink">Ordered</span>
+              {order.orderedAt}
+            </div>
+            <div>
+              <span className="block font-bold text-ink">Due</span>
+              {order.dueAt}
+            </div>
+            <div>
+              <span className="block font-bold text-ink">Manager</span>
+              {order.owner}
+            </div>
+          </div>
+
+          <div className="mt-5">
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span className={`rounded-full px-3 py-1 font-black ${statusTone[order.status]}`}>
+                {order.status}
+              </span>
+              <span className="font-mono text-xs font-bold text-muted">{order.progress}%</span>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-paper-2">
+              <div className="h-full rounded-full bg-gradient-to-r from-violet via-coral to-mint" style={{ width: `${order.progress}%` }} />
+            </div>
+          </div>
+        </div>
+
+        <div className="w-full rounded-xl border border-line bg-paper p-4 xl:w-72">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted">Amount</p>
+              <p className="mt-1 font-display text-3xl font-black">{money(order.amount)}</p>
+            </div>
+            {invoiceId ? (
+              <a
+                href={invoiceHref(invoiceId)}
+                download={`${invoiceId}.txt`}
+                className="inline-flex items-center gap-2 rounded-full bg-ink px-3 py-2 text-xs font-black text-paper transition hover:bg-violet"
+              >
+                <Download className="size-4" />
+                Invoice
+              </a>
+            ) : (
+              <button className="inline-flex items-center gap-2 rounded-full border border-line bg-card px-3 py-2 text-xs font-black text-muted">
+                <ExternalLink className="size-4" />
+                Details
+              </button>
+            )}
+          </div>
+
+          <div className="mt-4 border-t border-line pt-4">
+            <p className="line-clamp-1 text-sm font-bold text-ink">{order.targetUrl}</p>
+            <ul className="mt-3 space-y-2">
+              {order.deliverables.map((deliverable) => (
+                <li key={deliverable} className="flex gap-2 text-sm text-muted">
+                  <span className="mt-2 size-1.5 rounded-full bg-coral" />
+                  <span>{deliverable}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
