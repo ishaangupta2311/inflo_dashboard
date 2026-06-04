@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Case Studies — Outreach Influencers</title>
+<meta name="description" content="Real results from real campaigns: how brands and agencies grew rankings, traffic and revenue with Outreach Influencers.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .cs-feat { display:grid; grid-template-columns:1.2fr .8fr; gap:0; border:1.5px solid var(--line); border-radius:var(--radius-lg); overflow:hidden; background:var(--card); }
+  @media (max-width:860px){ .cs-feat{ grid-template-columns:1fr; } }
+  .cs-feat__body { padding:clamp(28px,4vw,48px); }
+  .cs-feat__side { background:var(--ink); color:#fff; padding:clamp(28px,4vw,48px); display:flex; flex-direction:column; justify-content:center; gap:22px; }
+  .cs-feat__side .stat__num { color:var(--lime); }
+  .filters { display:flex; gap:10px; flex-wrap:wrap; }
+  .filter-chip { padding:9px 16px; border-radius:999px; border:1.5px solid var(--line); background:var(--card); font-weight:600; font-size:.92rem; color:var(--ink-2); transition:.15s; }
+  .filter-chip:hover { border-color:var(--ink); }
+  .filter-chip.active { background:var(--ink); color:var(--paper); border-color:var(--ink); }
+  .cs-card { display:flex; flex-direction:column; height:100%; }
+  .cs-card__bar { display:flex; gap:18px; padding:16px 0 0; margin-top:auto; border-top:1.5px solid var(--line); }
+  .cs-card.hide { display:none; }
+  .cs-thumb { height:7px; border-radius:999px 999px 0 0; }
+</style>
+</head>
+<body data-page="case-studies">
+
+<!-- HERO -->
+<section class="section--tight" style="padding-top:clamp(44px,6vw,72px)" data-screen-label="Case Studies hero">
+  <div class="wrap">
+    <div class="eyebrow mb-16 reveal">Case studies</div>
+    <div class="flex items-center justify-between wrap-flex gap-24">
+      <h1 class="reveal" style="max-width:18ch">Proof, not promises.</h1>
+      <p class="lead maxw-sm reveal">Real campaigns, real numbers. Here’s what coordinated links, content and PR do for ambitious brands and agencies.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURED -->
+<section class="section--tight">
+  <div class="wrap">
+    <div class="cs-feat reveal">
+      <div class="cs-feat__body">
+        <span class="chip chip--coral mb-16">Featured · Ecommerce</span>
+        <h2 style="font-size:clamp(1.8rem,3vw,2.6rem)">How a DTC skincare brand 3.4×’d organic revenue in two quarters.</h2>
+        <p class="lead mt-16">Stuck on page three for its money terms, this DTC brand combined a Growth link bundle with a data-led digital PR campaign. Within six months it owned the top of the SERP — and started showing up in AI Overviews too.</p>
+        <div class="flex gap-12 wrap-flex mt-32"><span class="chip">Link Building</span><span class="chip">Digital PR</span><span class="chip">AI SEO</span></div>
+      </div>
+      <div class="cs-feat__side">
+        <div><div class="stat__num">3.4×</div><div style="color:#B8B4C4">organic revenue</div></div>
+        <div><div class="stat__num">+212%</div><div style="color:#B8B4C4">non-brand traffic</div></div>
+        <div><div class="stat__num">38</div><div style="color:#B8B4C4">tier-1 placements</div></div>
+        <a class="btn btn--lime mt-8" href="#" id="featRead">Read the full story →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FILTER + GRID -->
+<section class="section">
+  <div class="wrap">
+    <div class="filters mb-32 reveal" id="filters">
+      <button class="filter-chip active" data-filter="all">All</button>
+      <button class="filter-chip" data-filter="ecommerce">Ecommerce</button>
+      <button class="filter-chip" data-filter="saas">SaaS</button>
+      <button class="filter-chip" data-filter="agency">Agency</button>
+      <button class="filter-chip" data-filter="local">Local</button>
+      <button class="filter-chip" data-filter="finance">Finance</button>
+    </div>
+
+    <div class="grid grid-3" id="csGrid">
+      <article class="card card--hover cs-card reveal" data-cat="saas">
+        <div class="cs-thumb" style="background:linear-gradient(90deg,var(--violet),var(--coral));margin:-28px -28px 20px"></div>
+        <span class="tag mb-8">SaaS</span><h3>A B2B SaaS doubled demo signups from organic.</h3>
+        <p class="mt-8">A content + link program lifted a project-management tool into the top 3 for 40 high-intent keywords.</p>
+        <div class="cs-card__bar"><div><div class="stat__num" style="font-size:1.6rem">2.1×</div><div class="menu__d">demo signups</div></div><div><div class="stat__num" style="font-size:1.6rem">+148%</div><div class="menu__d">organic traffic</div></div></div>
+      </article>
+      <article class="card card--hover cs-card reveal" data-cat="agency">
+        <div class="cs-thumb" style="background:linear-gradient(90deg,var(--mint),var(--lime));margin:-28px -28px 20px"></div>
+        <span class="tag mb-8">Agency</span><h3>A 6-person agency added $40k/mo reselling SEO.</h3>
+        <p class="mt-8">White-label fulfilment let a boutique agency launch an SEO line without a single new hire.</p>
+        <div class="cs-card__bar"><div><div class="stat__num" style="font-size:1.6rem">$40k</div><div class="menu__d">new MRR</div></div><div><div class="stat__num" style="font-size:1.6rem">0</div><div class="menu__d">new hires</div></div></div>
+      </article>
+      <article class="card card--hover cs-card reveal" data-cat="local">
+        <div class="cs-thumb" style="background:linear-gradient(90deg,var(--coral),#FFB13C);margin:-28px -28px 20px"></div>
+        <span class="tag mb-8">Local</span><h3>A multi-location clinic owned its city’s map pack.</h3>
+        <p class="mt-8">Local citations, content and links pushed a healthcare group to #1 across 9 locations.</p>
+        <div class="cs-card__bar"><div><div class="stat__num" style="font-size:1.6rem">#1</div><div class="menu__d">map pack ×9</div></div><div><div class="stat__num" style="font-size:1.6rem">+86%</div><div class="menu__d">calls</div></div></div>
+      </article>
+      <article class="card card--hover cs-card reveal" data-cat="finance">
+        <div class="cs-thumb" style="background:linear-gradient(90deg,var(--ink),var(--violet));margin:-28px -28px 20px"></div>
+        <span class="tag mb-8">Finance</span><h3>A fintech earned 22 tier-1 features in one quarter.</h3>
+        <p class="mt-8">A data-led PR campaign turned proprietary spending data into national headlines and DR 90+ links.</p>
+        <div class="cs-card__bar"><div><div class="stat__num" style="font-size:1.6rem">22</div><div class="menu__d">tier-1 features</div></div><div><div class="stat__num" style="font-size:1.6rem">DR 92</div><div class="menu__d">avg. link</div></div></div>
+      </article>
+      <article class="card card--hover cs-card reveal" data-cat="ecommerce">
+        <div class="cs-thumb" style="background:linear-gradient(90deg,var(--violet),var(--mint));margin:-28px -28px 20px"></div>
+        <span class="tag mb-8">Ecommerce</span><h3>An outdoor retailer 4×’d category page traffic.</h3>
+        <p class="mt-8">Strategic internal links plus authority backlinks unlocked rankings on competitive category terms.</p>
+        <div class="cs-card__bar"><div><div class="stat__num" style="font-size:1.6rem">4×</div><div class="menu__d">category traffic</div></div><div><div class="stat__num" style="font-size:1.6rem">+63%</div><div class="menu__d">revenue</div></div></div>
+      </article>
+      <article class="card card--hover cs-card reveal" data-cat="saas">
+        <div class="cs-thumb" style="background:linear-gradient(90deg,#FFB13C,var(--coral));margin:-28px -28px 20px"></div>
+        <span class="tag mb-8">SaaS</span><h3>An AI startup became a cited source in ChatGPT.</h3>
+        <p class="mt-8">Entity optimisation and citations made a young AI tool a recommended option in LLM answers.</p>
+        <div class="cs-card__bar"><div><div class="stat__num" style="font-size:1.6rem">5/5</div><div class="menu__d">engines citing</div></div><div><div class="stat__num" style="font-size:1.6rem">+9k</div><div class="menu__d">AI referrals/mo</div></div></div>
+      </article>
+    </div>
+
+    <div class="center mt-48 reveal"><button class="btn btn--ghost btn--lg" id="loadMore">Load more case studies</button></div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="section">
+  <div class="wrap"><div class="big-cta reveal" style="background:var(--ink);border-radius:var(--radius-lg);padding:clamp(40px,6vw,72px);color:var(--paper);position:relative;overflow:hidden"><div style="position:relative">
+    <h2 style="font-size:clamp(2rem,4vw,3rem);color:#fff;max-width:20ch">Your results could be next.</h2>
+    <p class="lead" style="color:#B8B4C4;margin-top:14px;max-width:46ch">Start with a single order or a full growth program — either way, we’ll show you the numbers.</p>
+    <div class="flex gap-12 wrap-flex mt-32"><a class="btn btn--lime btn--lg" href="index.html#services">Explore services</a><a class="btn btn--lg" href="grow.html" style="background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.3)">See growth plans</a></div>
+  </div></div></div>
+</section>
+
+<script src="assets/site.js"></script>
+<script>
+  const chips=document.querySelectorAll('.filter-chip'),cards=document.querySelectorAll('#csGrid .cs-card');
+  chips.forEach(c=>c.addEventListener('click',()=>{
+    chips.forEach(x=>x.classList.remove('active'));c.classList.add('active');
+    const f=c.dataset.filter;
+    cards.forEach(card=>card.classList.toggle('hide', f!=='all' && card.dataset.cat!==f));
+  }));
+  document.getElementById('loadMore').addEventListener('click',()=>OI.toast('That’s all the case studies in this demo 🎉'));
+  document.getElementById('featRead').addEventListener('click',e=>{e.preventDefault();OI.toast('Full case study coming soon — demo prototype');});
+</script>
+</body>
+</html>

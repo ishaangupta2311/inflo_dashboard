@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Outreach Influencers — The SEO & Digital PR Marketplace</title>
+<meta name="description" content="Authority link building, digital PR, AI SEO and white-label SEO — order on demand from the marketplace trusted by 12,000+ agencies and brands.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  /* ---- Home-specific ---- */
+  .home-hero { position: relative; }
+  .home-hero::before {
+    content: ""; position: absolute; top: -120px; right: -180px; width: 620px; height: 620px;
+    background: radial-gradient(circle, rgba(91,61,245,.16), transparent 62%); pointer-events: none; z-index: -1;
+  }
+  .hero-badge { display: inline-flex; align-items: center; gap: 9px; background: var(--card); border: 1.5px solid var(--line); border-radius: 999px; padding: 7px 7px 7px 16px; font-size: .88rem; font-weight: 600; box-shadow: var(--shadow-sm); }
+  .hero-badge b { background: var(--lime); color: var(--lime-ink); padding: 3px 9px; border-radius: 999px; font-size: .78rem; }
+  .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 32px; }
+  .hero-proof { display: flex; gap: 36px; margin-top: 40px; flex-wrap: wrap; }
+  .hero-proof .stat__num { font-size: 2.1rem; }
+
+  /* layered order card visual */
+  .visual { position: relative; }
+  .order-card { background: var(--card); border: 1.5px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 22px; }
+  .oc-head { display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 1.5px solid var(--line); }
+  .oc-row { display: flex; align-items: center; gap: 13px; padding: 14px 0; border-bottom: 1px solid var(--line-2); }
+  .oc-ic { width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; flex: none; }
+  .oc-meter { height: 7px; border-radius: 999px; background: var(--paper-2); overflow: hidden; margin-top: 6px; }
+  .oc-meter i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg,var(--violet),var(--coral)); }
+  .float-card { position: absolute; background: var(--card); border: 1.5px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 14px 16px; }
+  .float-1 { bottom: -26px; left: -34px; display: flex; align-items: center; gap: 12px; }
+  .float-2 { top: -22px; right: -22px; display: flex; align-items: center; gap: 10px; }
+  @media (max-width: 1100px) { .float-1, .float-2 { display: none; } }
+
+  .svc-card { display: flex; flex-direction: column; height: 100%; }
+  .svc-card .price-from { font-family: var(--display); font-weight: 800; font-size: 1.5rem; letter-spacing: -.02em; }
+  .step-num { font-family: var(--display); font-weight: 800; font-size: 3.4rem; line-height: 1; color: var(--violet); -webkit-text-stroke: 0; opacity: .9; }
+  .logo-pill { font-family: var(--display); font-weight: 700; font-size: 1.4rem; color: var(--ink-3); white-space: nowrap; letter-spacing: -.02em; }
+  .quote-card { display: flex; flex-direction: column; gap: 18px; height: 100%; }
+  .quote-card p { font-size: 1.12rem; color: var(--ink); line-height: 1.5; }
+  .stars { color: var(--coral); letter-spacing: 2px; }
+  .big-cta { background: var(--ink); border-radius: var(--radius-lg); padding: clamp(40px,6vw,72px); color: var(--paper); position: relative; overflow: hidden; }
+  .big-cta::after { content:""; position:absolute; inset:0; background: radial-gradient(circle at 80% 20%, rgba(91,61,245,.5), transparent 50%); }
+  .big-cta > * { position: relative; }
+</style>
+</head>
+<body data-page="home">
+
+<!-- ============ HERO ============ -->
+<section class="hero home-hero" data-screen-label="Homepage hero">
+  <div class="wrap hero__grid">
+    <div>
+      <span class="hero-badge reveal">Rated 4.9 / 5 by agencies <b>12,000+ clients</b></span>
+      <h1 class="display reveal" style="margin-top:24px">Outreach that<br>moves the<br><span class="u-violet">whole</span> needle.</h1>
+      <p class="lead reveal maxw-sm" style="margin-top:22px">The on-demand marketplace for authority link building, digital PR, AI SEO and white-label fulfilment — built to scale rankings, traffic and revenue without the agency overhead.</p>
+      <div class="hero-cta reveal">
+        <button class="btn btn--coral btn--lg" id="heroStart">Start your first order</button>
+        <a class="btn btn--ghost btn--lg" href="index.html#services">Explore the marketplace</a>
+      </div>
+      <div class="hero-proof reveal">
+        <div><div class="stat__num">1.2M+</div><div class="stat__lbl">Placements delivered</div></div>
+        <div><div class="stat__num">DR&nbsp;70+</div><div class="stat__lbl">Average authority secured</div></div>
+        <div><div class="stat__num">14&nbsp;days</div><div class="stat__lbl">Typical turnaround</div></div>
+      </div>
+    </div>
+
+    <div class="visual reveal">
+      <div class="order-card">
+        <div class="oc-head">
+          <div><div class="tag">Live order · #OI-48201</div><strong style="font-family:var(--display);font-size:1.2rem">Q3 Authority Sprint</strong></div>
+          <span class="chip chip--lime">In progress</span>
+        </div>
+        <div class="oc-row">
+          <span class="oc-ic" style="background:var(--violet-soft);color:var(--violet)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></svg></span>
+          <div style="flex:1"><strong>10× Guest Posts · DR 60+</strong><div class="oc-meter"><i style="width:80%"></i></div></div>
+          <span class="muted" style="font-size:.85rem">8/10</span>
+        </div>
+        <div class="oc-row">
+          <span class="oc-ic" style="background:#FFE6DF;color:var(--coral-ink)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 13v-2z"/></svg></span>
+          <div style="flex:1"><strong>Digital PR · Tier-1 feature</strong><div class="oc-meter"><i style="width:100%;background:var(--mint)"></i></div></div>
+          <span class="chip chip--lime" style="font-size:.72rem">Live</span>
+        </div>
+        <div class="oc-row" style="border-bottom:none">
+          <span class="oc-ic" style="background:var(--ink);color:var(--lime)">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 4 8-9"/><path d="M16 7h5v5"/></svg></span>
+          <div style="flex:1"><strong>Organic traffic</strong><div class="muted" style="font-size:.85rem">+38% since launch</div></div>
+          <strong class="u-violet">↑ 38%</strong>
+        </div>
+      </div>
+      <div class="float-card float-1"><span class="avatar" style="background:var(--mint)">✓</span><div><div style="font-weight:700;font-size:.92rem">Backlink secured</div><div class="menu__d">forbes.com · DR 94</div></div></div>
+      <div class="float-card float-2"><span class="stars">★★★★★</span><span style="font-weight:700;font-size:.9rem">4.9</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LOGO MARQUEE ============ -->
+<section class="section--tight">
+  <div class="wrap center">
+    <p class="tag mb-24">Earning our clients coverage & links on</p>
+  </div>
+  <div class="marquee">
+    <div class="marquee__track">
+      <span class="logo-pill">Forbes</span><span class="logo-pill">TechCrunch</span><span class="logo-pill">Entrepreneur</span><span class="logo-pill">Business&nbsp;Insider</span><span class="logo-pill">HubSpot</span><span class="logo-pill">Mashable</span><span class="logo-pill">Inc.</span><span class="logo-pill">The&nbsp;Drum</span>
+      <span class="logo-pill">Forbes</span><span class="logo-pill">TechCrunch</span><span class="logo-pill">Entrepreneur</span><span class="logo-pill">Business&nbsp;Insider</span><span class="logo-pill">HubSpot</span><span class="logo-pill">Mashable</span><span class="logo-pill">Inc.</span><span class="logo-pill">The&nbsp;Drum</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SERVICES ============ -->
+<section class="section" id="services">
+  <div class="wrap">
+    <div class="flex items-center justify-between wrap-flex gap-24 mb-48">
+      <div>
+        <div class="eyebrow mb-16">The marketplace</div>
+        <h2 class="maxw-md">Everything you need to win search — in one place.</h2>
+      </div>
+      <p class="lead maxw-sm">Productised services with transparent pricing. Order à la carte or scale with a managed retainer.</p>
+    </div>
+
+    <div class="grid grid-3">
+      <!-- Link Building -->
+      <article class="card card--hover svc-card reveal">
+        <span class="card__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5"/></svg></span>
+        <h3>Link Building</h3>
+        <p style="margin:8px 0 18px">Editorially-placed guest posts and niche edits on real, traffic-driving sites — vetted by humans, never PBNs.</p>
+        <div class="flex items-center justify-between" style="margin-top:auto">
+          <div><span class="muted" style="font-size:.82rem">from</span><div class="price-from">$95</div></div>
+          <a class="btn btn--line btn--sm" href="link-building.html">View service →</a>
+        </div>
+      </article>
+      <!-- Digital PR -->
+      <article class="card card--hover svc-card reveal">
+        <span class="card__icon" style="background:#FFE6DF;color:var(--coral-ink)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 13v-2z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></span>
+        <h3>Digital PR</h3>
+        <p style="margin:8px 0 18px">Newsworthy campaigns and journalist outreach that land coverage on tier-1 publications your customers trust.</p>
+        <div class="flex items-center justify-between" style="margin-top:auto">
+          <div><span class="muted" style="font-size:.82rem">from</span><div class="price-from">$899</div></div>
+          <a class="btn btn--line btn--sm" href="digital-pr.html">View service →</a>
+        </div>
+      </article>
+      <!-- AI SEO -->
+      <article class="card card--hover svc-card reveal">
+        <span class="card__icon" style="background:var(--ink);color:var(--lime)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><rect x="7" y="7" width="10" height="10" rx="3"/><path d="M10 11h4M10 14h2"/></svg></span>
+        <h3>AI SEO <span class="chip chip--lime" style="vertical-align:middle">New</span></h3>
+        <p style="margin:8px 0 18px">Get your brand surfaced and cited by ChatGPT, Gemini and AI Overviews with entity-first optimisation.</p>
+        <div class="flex items-center justify-between" style="margin-top:auto">
+          <div><span class="muted" style="font-size:.82rem">from</span><div class="price-from">$499</div></div>
+          <a class="btn btn--line btn--sm" href="ai-seo.html">View service →</a>
+        </div>
+      </article>
+      <!-- SEO Reseller -->
+      <article class="card card--hover svc-card reveal">
+        <span class="card__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18l-1.5 4.5a2 2 0 0 1-1.9 1.5H6.4a2 2 0 0 1-1.9-1.5L3 7z"/><path d="M3 7 5 3h14l2 4"/></svg></span>
+        <h3>SEO Reseller</h3>
+        <p style="margin:8px 0 18px">White-label fulfilment with your branding on every report. Resell with up to 50% margins, zero in-house team.</p>
+        <div class="flex items-center justify-between" style="margin-top:auto">
+          <div><span class="muted" style="font-size:.82rem">from</span><div class="price-from">$149</div></div>
+          <a class="btn btn--line btn--sm" href="seo-reseller.html">View service →</a>
+        </div>
+      </article>
+      <!-- Grow -->
+      <article class="card card--hover svc-card reveal">
+        <span class="card__icon" style="background:var(--lime);color:var(--lime-ink)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 4 8-9"/><path d="M16 7h5v5"/></svg></span>
+        <h3>Grow</h3>
+        <p style="margin:8px 0 18px">A fully-managed growth retainer — strategy, content, links and PR working together against one clear roadmap.</p>
+        <div class="flex items-center justify-between" style="margin-top:auto">
+          <div><span class="muted" style="font-size:.82rem">from</span><div class="price-from">$1,950<small style="font-size:.5em">/mo</small></div></div>
+          <a class="btn btn--line btn--sm" href="grow.html">View service →</a>
+        </div>
+      </article>
+      <!-- CTA card -->
+      <article class="card svc-card reveal panel-ink" style="background:var(--ink);color:var(--paper);border-color:var(--ink)">
+        <h3 style="color:#fff">Not sure where to start?</h3>
+        <p style="margin:10px 0 20px;color:#B8B4C4">Tell us your goals and we’ll build a tailored roadmap and quote — usually within one business day.</p>
+        <button class="btn btn--lime" style="margin-top:auto;align-self:flex-start" id="svcTalk">Book a strategy call →</button>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section class="section panel" style="border-block:1.5px solid var(--line)">
+  <div class="wrap">
+    <div class="center mb-48">
+      <div class="eyebrow eyebrow--center mb-16">How it works</div>
+      <h2 class="maxw-md mx-auto">From order to results in four simple steps.</h2>
+    </div>
+    <div class="grid grid-4">
+      <div class="reveal"><div class="step-num">01</div><h4 style="margin:14px 0 8px">Pick your service</h4><p>Browse the marketplace and add exactly what you need — no calls, no quotes required.</p></div>
+      <div class="reveal"><div class="step-num">02</div><h4 style="margin:14px 0 8px">Brief in seconds</h4><p>Share your target URLs and anchors. Our team handles vetting, outreach and placement.</p></div>
+      <div class="reveal"><div class="step-num">03</div><h4 style="margin:14px 0 8px">We deliver</h4><p>Track every placement live. Every link and feature is reviewed against strict quality gates.</p></div>
+      <div class="reveal"><div class="step-num">04</div><h4 style="margin:14px 0 8px">Watch you grow</h4><p>Live reporting ties placements to rankings, traffic and revenue you can show your stakeholders.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FEATURED PACKAGES ============ -->
+<section class="section">
+  <div class="wrap">
+    <div class="center mb-48">
+      <div class="eyebrow eyebrow--center mb-16">Best-sellers</div>
+      <h2>Add a bundle and go live today.</h2>
+      <p class="lead maxw-sm mx-auto mt-16">Transparent, productised pricing. Logged in? Add straight to cart. New here? You’ll create a free account first.</p>
+    </div>
+    <div class="grid grid-3" style="align-items:start">
+      <article class="card pkg reveal">
+        <div class="tag mb-8">Starter</div>
+        <h3 class="mb-16">Authority Starter</h3>
+        <div class="pkg__price">$285</div>
+        <ul class="pkg__list">
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>3× guest posts on DR 50+ sites</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Human-vetted, real-traffic domains</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Niche-relevant placement</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Live tracking dashboard</li>
+        </ul>
+        <button class="btn btn--ghost btn--block" style="margin-top:auto" data-add data-id="pkg-starter" data-name="Authority Starter" data-price="285" data-meta="3× DR50+ guest posts"><span class="cart-btn-label">Add to Cart</span></button>
+      </article>
+
+      <article class="card pkg is-featured reveal">
+        <div class="tag mb-8">Most chosen</div>
+        <h3 class="mb-16">Growth Sprint</h3>
+        <div class="pkg__price">$890</div>
+        <ul class="pkg__list">
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>8× guest posts on DR 60+ sites</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>1× digital PR mention included</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Anchor & target strategy review</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Priority 10-day turnaround</li>
+        </ul>
+        <button class="btn btn--coral btn--block" style="margin-top:auto" data-add data-id="pkg-growth" data-name="Growth Sprint" data-price="890" data-meta="8× DR60+ posts + 1 PR"><span class="cart-btn-label">Add to Cart</span></button>
+      </article>
+
+      <article class="card pkg reveal">
+        <div class="tag mb-8">Scale</div>
+        <h3 class="mb-16">PR Power Play</h3>
+        <div class="pkg__price">$2,400</div>
+        <ul class="pkg__list">
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Full digital PR campaign</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>3–5 tier-1 media features</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Data-led story angle & assets</li>
+          <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Dedicated PR strategist</li>
+        </ul>
+        <button class="btn btn--ghost btn--block" style="margin-top:auto" data-add data-id="pkg-pr" data-name="PR Power Play" data-price="2400" data-meta="Full digital PR campaign"><span class="cart-btn-label">Add to Cart</span></button>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CASE STUDY HIGHLIGHT ============ -->
+<section class="section panel" style="border-block:1.5px solid var(--line)">
+  <div class="wrap hero__grid" style="align-items:center">
+    <div class="reveal">
+      <div class="eyebrow eyebrow--coral mb-16">Case study</div>
+      <h2 class="maxw-md">How a DTC brand 3.4×’d organic revenue in two quarters.</h2>
+      <p class="lead mt-16 maxw-sm">A combined link building + digital PR program lifted a competitive ecommerce store from page 3 to the top of the SERP — and AI search results — for its money terms.</p>
+      <div class="grid grid-3 mt-32" style="gap:18px">
+        <div><div class="stat__num u-violet">3.4×</div><div class="stat__lbl">organic revenue</div></div>
+        <div><div class="stat__num u-violet">+212%</div><div class="stat__lbl">non-brand traffic</div></div>
+        <div><div class="stat__num u-violet">38</div><div class="stat__lbl">tier-1 placements</div></div>
+      </div>
+      <a class="btn btn--ghost mt-32" href="case-studies.html">Read the case studies →</a>
+    </div>
+    <div class="reveal">
+      <div class="order-card" style="box-shadow:var(--shadow-lg)">
+        <div class="oc-head"><strong style="font-family:var(--display);font-size:1.15rem">Organic sessions</strong><span class="chip chip--lime">+212%</span></div>
+        <svg viewBox="0 0 320 150" style="width:100%;height:auto;margin-top:14px" preserveAspectRatio="none">
+          <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5B3DF5" stop-opacity=".28"/><stop offset="1" stop-color="#5B3DF5" stop-opacity="0"/></linearGradient></defs>
+          <path d="M0 130 C 50 125, 80 118, 110 100 S 170 70, 210 52 S 280 28, 320 14 L 320 150 L 0 150 Z" fill="url(#g)"/>
+          <path d="M0 130 C 50 125, 80 118, 110 100 S 170 70, 210 52 S 280 28, 320 14" fill="none" stroke="#5B3DF5" stroke-width="2.5" stroke-linecap="round"/>
+        </svg>
+        <div class="flex items-center justify-between" style="margin-top:6px"><span class="muted" style="font-size:.82rem">Jan</span><span class="muted" style="font-size:.82rem">Jun</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TESTIMONIALS ============ -->
+<section class="section">
+  <div class="wrap">
+    <div class="flex items-center justify-between wrap-flex gap-24 mb-48">
+      <div><div class="eyebrow mb-16">Loved by operators</div><h2>Don’t take our word for it.</h2></div>
+      <div class="flex items-center gap-12"><span class="stars" style="font-size:1.3rem">★★★★★</span><div><strong>4.9 / 5</strong><div class="menu__d">from 2,800+ reviews</div></div></div>
+    </div>
+    <div class="grid grid-3">
+      <article class="card quote-card reveal">
+        <span class="stars">★★★★★</span>
+        <p>“We replaced two in-house link builders with Outreach Influencers and our placement quality went <em>up</em>. The dashboard alone sells it to our clients.”</p>
+        <div class="flex items-center gap-12" style="margin-top:auto"><span class="avatar">MK</span><div><strong>Mara Kessler</strong><div class="menu__d">Founder, North&Pine Agency</div></div></div>
+      </article>
+      <article class="card quote-card reveal">
+        <span class="stars">★★★★★</span>
+        <p>“The digital PR team landed us in Forbes and Business Insider in week three. That coverage is still sending qualified traffic a year later.”</p>
+        <div class="flex items-center gap-12" style="margin-top:auto"><span class="avatar" style="background:var(--coral)">DO</span><div><strong>Daniel Osei</strong><div class="menu__d">Head of Growth, Lumen DTC</div></div></div>
+      </article>
+      <article class="card quote-card reveal">
+        <span class="stars">★★★★★</span>
+        <p>“As a reseller, the white-label reports make me look like I have a 20-person team. Margins are healthy and turnaround is genuinely fast.”</p>
+        <div class="flex items-center gap-12" style="margin-top:auto"><span class="avatar" style="background:var(--mint)">RV</span><div><strong>Rina Valdez</strong><div class="menu__d">Director, ClickCadence</div></div></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BIG CTA ============ -->
+<section class="section--tight" style="padding-bottom:clamp(56px,9vw,120px)">
+  <div class="wrap">
+    <div class="big-cta reveal">
+      <div class="hero__grid" style="align-items:center;gap:40px">
+        <div>
+          <h2 style="font-size:clamp(2rem,4vw,3.2rem)">Ready to out-rank,<br>out-rank and out-grow?</h2>
+          <p class="lead" style="color:#B8B4C4;margin-top:16px">Create a free account and place your first order in minutes. No contracts, no minimums, cancel anytime.</p>
+        </div>
+        <div class="flex gap-12 wrap-flex" style="justify-content:flex-end">
+          <button class="btn btn--lime btn--lg" id="ctaStart">Create free account</button>
+          <a class="btn btn--lg" href="index.html#services" style="background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.3)">Browse services</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script src="assets/site.js"></script>
+<script>
+  function startCta(){ OI.state.loggedIn ? OI.openDrawer() : OI.openAuth('signup'); }
+  ['heroStart','ctaStart','svcTalk'].forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('click', startCta); });
+</script>
+</body>
+</html>

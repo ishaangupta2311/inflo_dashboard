@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog — Outreach Influencers</title>
+<meta name="description" content="Actionable guides on link building, digital PR, AI SEO and growing organic revenue — from the team behind 1.2M+ placements.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .post-feat { display:grid; grid-template-columns:1.1fr .9fr; border:1.5px solid var(--line); border-radius:var(--radius-lg); overflow:hidden; background:var(--card); }
+  @media (max-width:860px){ .post-feat{ grid-template-columns:1fr; } }
+  .post-feat__img { background:linear-gradient(135deg,var(--violet),var(--coral)); min-height:300px; position:relative; }
+  .post-feat__img .glyph { position:absolute; inset:0; display:grid; place-items:center; font-family:var(--display); font-weight:800; font-size:5rem; color:rgba(255,255,255,.85); }
+  .post-feat__body { padding:clamp(28px,4vw,48px); display:flex; flex-direction:column; justify-content:center; }
+  .post-card { display:flex; flex-direction:column; height:100%; overflow:hidden; padding:0; }
+  .post-card__img { height:160px; position:relative; }
+  .post-card__img .glyph { position:absolute; inset:0; display:grid; place-items:center; font-family:var(--display); font-weight:800; font-size:2.4rem; color:rgba(255,255,255,.9); }
+  .post-card__body { padding:22px; display:flex; flex-direction:column; flex:1; }
+  .post-meta { display:flex; gap:10px; align-items:center; font-size:.82rem; color:var(--ink-3); margin-top:auto; padding-top:14px; }
+  .filters { display:flex; gap:10px; flex-wrap:wrap; }
+  .filter-chip { padding:9px 16px; border-radius:999px; border:1.5px solid var(--line); background:var(--card); font-weight:600; font-size:.92rem; color:var(--ink-2); transition:.15s; }
+  .filter-chip:hover { border-color:var(--ink); } .filter-chip.active { background:var(--ink); color:var(--paper); border-color:var(--ink); }
+  .post-card.hide { display:none; }
+  .news { background:var(--ink); color:#fff; border-radius:var(--radius-lg); padding:clamp(28px,4vw,44px); }
+  .news input { background:rgba(255,255,255,.08); border:1.5px solid rgba(255,255,255,.18); color:#fff; }
+  .news input::placeholder { color:#8E8A9A; }
+</style>
+</head>
+<body data-page="blog">
+
+<!-- HERO -->
+<section class="section--tight" style="padding-top:clamp(44px,6vw,72px)" data-screen-label="Blog hero">
+  <div class="wrap">
+    <div class="eyebrow mb-16 reveal">The blog</div>
+    <div class="flex items-center justify-between wrap-flex gap-24">
+      <h1 class="reveal" style="max-width:16ch">Win at search.<br>One read at a time.</h1>
+      <p class="lead maxw-sm reveal">Field-tested tactics on links, digital PR and AI SEO — written by the team behind 1.2M+ placements.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURED POST -->
+<section class="section--tight">
+  <div class="wrap">
+    <a class="post-feat reveal" href="#" data-post>
+      <div class="post-feat__img"><span class="glyph">AI</span><span class="chip chip--lime" style="position:absolute;top:18px;left:18px">Editor’s pick</span></div>
+      <div class="post-feat__body">
+        <span class="tag mb-8">AI SEO · 11 min read</span>
+        <h2 style="font-size:clamp(1.6rem,2.6vw,2.3rem)">The 2026 guide to getting cited by ChatGPT and AI Overviews</h2>
+        <p class="lead mt-16">Search is becoming an answer engine. Here’s the exact entity-first playbook we use to make brands the source LLMs quote — with examples and a checklist.</p>
+        <div class="post-meta"><span class="avatar" style="width:28px;height:28px;font-size:.78rem">SR</span><span>Sam Reyes</span><span>·</span><span>May 28, 2026</span></div>
+      </div>
+    </a>
+  </div>
+</section>
+
+<!-- FILTER + GRID -->
+<section class="section">
+  <div class="wrap">
+    <div class="filters mb-32 reveal" id="filters">
+      <button class="filter-chip active" data-filter="all">All</button>
+      <button class="filter-chip" data-filter="links">Link Building</button>
+      <button class="filter-chip" data-filter="pr">Digital PR</button>
+      <button class="filter-chip" data-filter="ai">AI SEO</button>
+      <button class="filter-chip" data-filter="agency">Agency</button>
+      <button class="filter-chip" data-filter="strategy">Strategy</button>
+    </div>
+
+    <div class="grid grid-3" id="postGrid">
+      <a class="card card--hover post-card reveal" data-cat="links" href="#" data-post>
+        <div class="post-card__img" style="background:linear-gradient(135deg,var(--violet),#8E6BFF)"><span class="glyph">🔗</span></div>
+        <div class="post-card__body"><span class="tag mb-8">Link Building</span><h3 style="font-size:1.25rem">How to spot a fake DR 60 site before you pay for it</h3><div class="post-meta"><span>May 21, 2026</span><span>·</span><span>7 min</span></div></div>
+      </a>
+      <a class="card card--hover post-card reveal" data-cat="pr" href="#" data-post>
+        <div class="post-card__img" style="background:linear-gradient(135deg,var(--coral),#FFB13C)"><span class="glyph">📣</span></div>
+        <div class="post-card__body"><span class="tag mb-8">Digital PR</span><h3 style="font-size:1.25rem">The data-led PR formula that lands tier-1 coverage</h3><div class="post-meta"><span>May 16, 2026</span><span>·</span><span>9 min</span></div></div>
+      </a>
+      <a class="card card--hover post-card reveal" data-cat="agency" href="#" data-post>
+        <div class="post-card__img" style="background:linear-gradient(135deg,var(--mint),var(--lime))"><span class="glyph">📈</span></div>
+        <div class="post-card__body"><span class="tag mb-8">Agency</span><h3 style="font-size:1.25rem">Pricing SEO as a reseller: a margin playbook</h3><div class="post-meta"><span>May 9, 2026</span><span>·</span><span>6 min</span></div></div>
+      </a>
+      <a class="card card--hover post-card reveal" data-cat="strategy" href="#" data-post>
+        <div class="post-card__img" style="background:linear-gradient(135deg,var(--ink),var(--violet))"><span class="glyph">🎯</span></div>
+        <div class="post-card__body"><span class="tag mb-8">Strategy</span><h3 style="font-size:1.25rem">Why one-off links don’t move the needle (and what does)</h3><div class="post-meta"><span>May 2, 2026</span><span>·</span><span>8 min</span></div></div>
+      </a>
+      <a class="card card--hover post-card reveal" data-cat="ai" href="#" data-post>
+        <div class="post-card__img" style="background:linear-gradient(135deg,#5B3DF5,var(--mint))"><span class="glyph">🤖</span></div>
+        <div class="post-card__body"><span class="tag mb-8">AI SEO</span><h3 style="font-size:1.25rem">Schema that actually helps LLMs understand your brand</h3><div class="post-meta"><span>Apr 27, 2026</span><span>·</span><span>10 min</span></div></div>
+      </a>
+      <a class="card card--hover post-card reveal" data-cat="links" href="#" data-post>
+        <div class="post-card__img" style="background:linear-gradient(135deg,#FFB13C,var(--coral))"><span class="glyph">✍️</span></div>
+        <div class="post-card__body"><span class="tag mb-8">Link Building</span><h3 style="font-size:1.25rem">Anchor text ratios in 2026: a practical guide</h3><div class="post-meta"><span>Apr 19, 2026</span><span>·</span><span>5 min</span></div></div>
+      </a>
+    </div>
+
+    <div class="center mt-48 reveal"><button class="btn btn--ghost btn--lg" id="loadMore">Load more articles</button></div>
+  </div>
+</section>
+
+<!-- NEWSLETTER -->
+<section class="section--tight" style="padding-bottom:clamp(56px,9vw,120px)">
+  <div class="wrap">
+    <div class="news reveal">
+      <div class="hero__grid" style="align-items:center;gap:32px">
+        <div><h2 style="color:#fff;font-size:clamp(1.8rem,3vw,2.4rem)">Get the growth playbook in your inbox.</h2><p style="color:#B8B4C4;margin-top:12px">One sharp, actionable email a week. No fluff, unsubscribe anytime.</p></div>
+        <form class="flex gap-12 wrap-flex" id="newsForm" style="justify-content:flex-end">
+          <input type="email" required placeholder="you@company.com" class="field" style="padding:14px 16px;border-radius:12px;min-width:240px;flex:1;margin:0">
+          <button class="btn btn--lime btn--lg" type="submit">Subscribe</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script src="assets/site.js"></script>
+<script>
+  const chips=document.querySelectorAll('.filter-chip'),cards=document.querySelectorAll('#postGrid .post-card');
+  chips.forEach(c=>c.addEventListener('click',()=>{chips.forEach(x=>x.classList.remove('active'));c.classList.add('active');const f=c.dataset.filter;cards.forEach(card=>card.classList.toggle('hide',f!=='all'&&card.dataset.cat!==f));}));
+  document.querySelectorAll('[data-post]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();OI.toast('Article coming soon — demo prototype');}));
+  document.getElementById('loadMore').addEventListener('click',()=>OI.toast('That’s all the articles in this demo 🎉'));
+  document.getElementById('newsForm').addEventListener('submit',e=>{e.preventDefault();e.target.reset();OI.toast('Subscribed — welcome aboard! (demo)');});
+</script>
+</body>
+</html>

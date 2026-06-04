@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Become an Affiliate — Apply | Outreach Influencers</title>
+<meta name="description" content="Apply to the Outreach Influencers affiliate program and start earning 30% recurring commission.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="assets/styles.css">
+<style>
+  .apply-grid { display:grid; grid-template-columns: 1fr 1.05fr; gap: clamp(32px,5vw,64px); align-items:start; }
+  @media (max-width: 900px){ .apply-grid{ grid-template-columns:1fr; } }
+  .apply-card { background: var(--card); border:1.5px solid var(--line); border-radius: var(--radius-lg); padding: clamp(26px,4vw,40px); box-shadow: var(--shadow); }
+  .perk { display:flex; gap:12px; align-items:flex-start; }
+  .perk svg { color: var(--mint); flex:none; margin-top:3px; }
+  .field-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:520px){ .field-row{ grid-template-columns:1fr; } }
+  .success { display:none; text-align:center; padding:20px 0; }
+  .success.show { display:block; }
+</style>
+</head>
+<body data-page="become-affiliate">
+
+<section class="section" data-screen-label="Become an Affiliate">
+  <div class="wrap">
+    <div class="breadcrumb reveal"><a href="affiliates.html">Affiliate program</a><span>/</span><span style="color:var(--ink)">Apply</span></div>
+    <div class="apply-grid mt-24">
+      <!-- left: pitch -->
+      <div class="reveal">
+        <div class="eyebrow mb-16">Join the program</div>
+        <h1 style="font-size:clamp(2.4rem,4.6vw,3.6rem)">Start earning<br>30% recurring.</h1>
+        <p class="lead mt-16 maxw-sm">Apply in two minutes. Once you’re approved you’ll get your tracking link, creative assets and a real-time earnings dashboard.</p>
+        <div style="display:flex;flex-direction:column;gap:18px;margin-top:32px">
+          <div class="perk"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><div><strong>30% recurring commission</strong><div class="menu__d">On every order, for the lifetime of the customer.</div></div></div>
+          <div class="perk"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><div><strong>90-day cookie window</strong><div class="menu__d">Plenty of time for referrals to convert.</div></div></div>
+          <div class="perk"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><div><strong>Reliable Net-30 payouts</strong><div class="menu__d">PayPal or bank transfer, $50 minimum.</div></div></div>
+          <div class="perk"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><div><strong>Ready-made assets</strong><div class="menu__d">Banners, copy and comparison pages on tap.</div></div></div>
+        </div>
+        <div class="card mt-32" style="background:var(--ink);color:#fff;border:none">
+          <span class="stars" style="color:var(--coral)">★★★★★</span>
+          <p style="color:#E8E6EF;margin-top:10px">“I added an affiliate link to one SEO guide and it now pays more than my old part-time retainer — completely hands-off.”</p>
+          <div class="flex items-center gap-12 mt-16"><span class="avatar" style="background:var(--lime);color:var(--ink)">JT</span><div><strong style="color:#fff">Jordan Tan</strong><div class="menu__d" style="color:#8E8A9A">SEO creator · 48k subscribers</div></div></div>
+        </div>
+      </div>
+
+      <!-- right: form -->
+      <div class="apply-card reveal">
+        <form id="affForm">
+          <h3 class="mb-24">Affiliate application</h3>
+          <div class="field-row">
+            <div class="field"><label>First name</label><input required name="first" placeholder="Alex"></div>
+            <div class="field"><label>Last name</label><input required name="last" placeholder="Rivera"></div>
+          </div>
+          <div class="field"><label>Email</label><input required type="email" name="email" placeholder="you@domain.com"></div>
+          <div class="field"><label>Website / channel URL</label><input required name="url" placeholder="https://yoursite.com"></div>
+          <div class="field"><label>Which best describes you?</label>
+            <select name="type" required>
+              <option value="">Select one…</option>
+              <option>Content creator / blogger</option>
+              <option>Agency or freelancer</option>
+              <option>Community / course owner</option>
+              <option>Consultant / advisor</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field"><label>How do you plan to promote us?</label><textarea name="plan" rows="3" placeholder="e.g. SEO blog content, my newsletter, client recommendations…"></textarea></div>
+          <div class="field"><label>Estimated monthly audience / reach</label>
+            <select name="reach">
+              <option>Under 1,000</option><option>1,000 – 10,000</option><option>10,000 – 50,000</option><option>50,000 – 250,000</option><option>250,000+</option>
+            </select>
+          </div>
+          <button class="btn btn--coral btn--block btn--lg mt-8" type="submit">Submit application</button>
+          <p class="center muted" style="font-size:.82rem;margin-top:12px">Most applications are reviewed within one business day.</p>
+        </form>
+        <div class="success" id="affSuccess">
+          <div class="avatar mx-auto" style="width:64px;height:64px;background:var(--mint);font-size:1.6rem;margin-bottom:18px">✓</div>
+          <h3>Application received!</h3>
+          <p class="mt-8">Thanks — we’ll review your details and email your affiliate link within one business day.</p>
+          <a class="btn btn--ghost mt-24" href="affiliates.html">Back to program →</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script src="assets/site.js"></script>
+<script>
+  document.getElementById('affForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    document.getElementById('affForm').style.display='none';
+    document.getElementById('affSuccess').classList.add('show');
+    OI.toast('Application submitted — demo prototype');
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+</script>
+</body>
+</html>
