@@ -1,29 +1,42 @@
 import Link from "next/link";
-import { ArrowRight, Download, Plus } from "lucide-react";
+import { ArrowRight, Download, FileText, PackageCheck, Plus, TrendingUp } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { OrderCard } from "@/components/order-card";
-import { activeOrders, completedOrders, dashboardStats, invoiceHref } from "@/lib/orders";
+import { getDashboardData } from "@/lib/order-backend";
+import { invoiceHref } from "@/lib/orders";
 
-export default function OrdersPage() {
+const statIcons = {
+  violet: PackageCheck,
+  ink: FileText,
+  coral: TrendingUp
+};
+
+export default async function OrdersPage() {
+  const { activeOrders, completedOrders, stats } = await getDashboardData();
+
   return (
     <DashboardShell>
       <section className="grid gap-4 md:grid-cols-3">
-        {dashboardStats.map((stat) => (
-          <div key={stat.label} className="rounded-2xl border border-line bg-card p-5 shadow-card">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted">
-                  {stat.label}
-                </p>
-                <p className="mt-3 font-display text-4xl font-black tracking-tight">{stat.value}</p>
-                <p className="mt-1 text-sm text-muted">{stat.detail}</p>
+        {stats.map((stat) => {
+          const Icon = statIcons[stat.tone];
+
+          return (
+            <div key={stat.label} className="rounded-2xl border border-line bg-card p-5 shadow-card">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted">
+                    {stat.label}
+                  </p>
+                  <p className="mt-3 font-display text-4xl font-black tracking-tight">{stat.value}</p>
+                  <p className="mt-1 text-sm text-muted">{stat.detail}</p>
+                </div>
+                <span className="grid size-11 place-items-center rounded-xl bg-violet-soft text-violet">
+                  <Icon className="size-5" />
+                </span>
               </div>
-              <span className="grid size-11 place-items-center rounded-xl bg-violet-soft text-violet">
-                <stat.icon className="size-5" />
-              </span>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </section>
 
       <section className="mt-6 overflow-hidden rounded-3xl border border-line bg-ink text-paper shadow-soft">
@@ -39,7 +52,7 @@ export default function OrdersPage() {
           <div className="flex flex-col justify-between gap-6 rounded-2xl border border-white/10 bg-white/8 p-5">
             <p className="text-sm leading-6 text-[#d9d5e2]">
               This prototype mirrors the future production dashboard at app.influenceroutreachsolutions.com.
-              Orders and invoice downloads are mock data today, but the UI is structured around typed data.
+              Orders and invoice downloads are served by Next.js backend routes today, with storage mocked until the production database is selected.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, CalendarDays, Link2, Target } from "lucide-react";
+import { createOrderAction } from "@/app/actions";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { money, serviceOptions } from "@/lib/orders";
 
@@ -24,7 +25,7 @@ export default function NewOrderPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
+      <form action={createOrderAction} className="grid gap-6 xl:grid-cols-[1fr_380px]">
         <section className="rounded-3xl border border-line bg-card p-5 shadow-card sm:p-6">
           <h2 className="font-display text-2xl font-black tracking-tight">Choose a service</h2>
           <div className="mt-5 grid gap-3 md:grid-cols-2">
@@ -35,7 +36,7 @@ export default function NewOrderPage() {
                   index === 0 ? "border-ink bg-paper" : "border-line bg-card"
                 }`}
               >
-                <input className="sr-only" type="radio" name="service" defaultChecked={index === 0} />
+                <input className="sr-only" type="radio" name="category" value={service.name} defaultChecked={index === 0} />
                 <div className="flex items-start gap-3">
                   <span className="grid size-11 place-items-center rounded-xl bg-violet-soft text-violet">
                     <service.icon className="size-5" />
@@ -58,21 +59,21 @@ export default function NewOrderPage() {
                 <Target className="size-4 text-violet" />
                 Campaign name
               </span>
-              <input className="w-full rounded-xl border border-line bg-paper px-4 py-3 outline-none transition focus:border-violet focus:ring-4 focus:ring-violet/15" defaultValue="June authority sprint" />
+              <input name="service" className="w-full rounded-xl border border-line bg-paper px-4 py-3 outline-none transition focus:border-violet focus:ring-4 focus:ring-violet/15" defaultValue="June authority sprint" />
             </label>
             <label className="block">
               <span className="mb-2 flex items-center gap-2 text-sm font-black">
                 <Link2 className="size-4 text-violet" />
                 Target URL
               </span>
-              <input className="w-full rounded-xl border border-line bg-paper px-4 py-3 outline-none transition focus:border-violet focus:ring-4 focus:ring-violet/15" placeholder="https://example.com/page" />
+              <input name="targetUrl" className="w-full rounded-xl border border-line bg-paper px-4 py-3 outline-none transition focus:border-violet focus:ring-4 focus:ring-violet/15" placeholder="https://example.com/page" />
             </label>
             <label className="block">
               <span className="mb-2 flex items-center gap-2 text-sm font-black">
                 <CalendarDays className="size-4 text-violet" />
                 Preferred delivery window
               </span>
-              <select className="w-full rounded-xl border border-line bg-paper px-4 py-3 outline-none transition focus:border-violet focus:ring-4 focus:ring-violet/15" defaultValue="standard">
+              <select name="deliveryWindow" className="w-full rounded-xl border border-line bg-paper px-4 py-3 outline-none transition focus:border-violet focus:ring-4 focus:ring-violet/15" defaultValue="standard">
                 <option value="standard">Standard · 14-21 days</option>
                 <option value="priority">Priority · 7-10 days</option>
                 <option value="managed">Managed roadmap · monthly</option>
@@ -80,7 +81,7 @@ export default function NewOrderPage() {
             </label>
             <label className="block">
               <span className="mb-2 block text-sm font-black">Budget range</span>
-              <select className="w-full rounded-xl border border-line bg-paper px-4 py-3 outline-none transition focus:border-violet focus:ring-4 focus:ring-violet/15" defaultValue="1000-2500">
+              <select name="budgetRange" className="w-full rounded-xl border border-line bg-paper px-4 py-3 outline-none transition focus:border-violet focus:ring-4 focus:ring-violet/15" defaultValue="1000-2500">
                 <option value="under-1000">Under $1,000</option>
                 <option value="1000-2500">$1,000 - $2,500</option>
                 <option value="2500-5000">$2,500 - $5,000</option>
@@ -92,6 +93,7 @@ export default function NewOrderPage() {
           <label className="mt-4 block">
             <span className="mb-2 block text-sm font-black">Brief</span>
             <textarea
+              name="brief"
               className="min-h-36 w-full rounded-xl border border-line bg-paper px-4 py-3 outline-none transition focus:border-violet focus:ring-4 focus:ring-violet/15"
               defaultValue="We want placements for our main product page with branded and partial-match anchors. Avoid coupon, casino, and generic directory sites."
             />
@@ -125,10 +127,10 @@ export default function NewOrderPage() {
             <ArrowRight className="size-4" />
           </button>
           <p className="mt-3 text-center text-xs text-[#bdb7c9]">
-            Prototype button only. Production will create an order and invoice session.
+            This creates a mock backend order now. Production will add payment and invoice persistence.
           </p>
         </aside>
-      </div>
+      </form>
     </DashboardShell>
   );
 }

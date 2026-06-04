@@ -1,13 +1,4 @@
-import {
-  ArrowUpRight,
-  Bot,
-  FileText,
-  Link2,
-  Megaphone,
-  PackageCheck,
-  Store,
-  TrendingUp
-} from "lucide-react";
+import { Bot, Link2, Megaphone, PackageCheck, Store, TrendingUp } from "lucide-react";
 import type { ComponentType } from "react";
 
 export type OrderStatus =
@@ -72,7 +63,7 @@ export const serviceOptions: ServiceOption[] = [
   }
 ];
 
-export const orders: Order[] = [
+export const seedOrders: Order[] = [
   {
     id: "INF-48201",
     service: "Q3 Authority Sprint",
@@ -142,9 +133,6 @@ export const orders: Order[] = [
   }
 ];
 
-export const activeOrders = orders.filter((order) => order.status !== "Completed");
-export const completedOrders = orders.filter((order) => order.status === "Completed");
-
 export const money = (amount: number) =>
   new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -156,25 +144,4 @@ export const iconForCategory = (category: Order["category"]) =>
   serviceOptions.find((option) => option.name === category)?.icon ?? PackageCheck;
 
 export const invoiceHref = (invoiceId: string) =>
-  `data:text/plain;charset=utf-8,Influencer Outreach Solutions invoice ${invoiceId}%0AThis prototype will connect invoice PDFs from the production billing system.`;
-
-export const dashboardStats = [
-  {
-    label: "Current orders",
-    value: activeOrders.length.toString(),
-    detail: "3 services in delivery",
-    icon: PackageCheck
-  },
-  {
-    label: "Completed orders",
-    value: completedOrders.length.toString(),
-    detail: "$2,073 delivered",
-    icon: FileText
-  },
-  {
-    label: "Avg. progress",
-    value: "75%",
-    detail: "Across active work",
-    icon: ArrowUpRight
-  }
-];
+  `/api/invoices/${encodeURIComponent(invoiceId)}`;
