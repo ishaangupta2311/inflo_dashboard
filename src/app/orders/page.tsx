@@ -52,7 +52,7 @@ export default async function OrdersPage() {
           <div className="flex flex-col justify-between gap-6 rounded-2xl border border-white/10 bg-white/8 p-5">
             <p className="text-sm leading-6 text-[#d9d5e2]">
               This prototype mirrors the future production dashboard at app.influenceroutreachsolutions.com.
-              Orders and invoice downloads are served by Next.js backend routes today, with storage mocked until the production database is selected.
+              Orders and invoice downloads are served by Next.js backend routes today, ready for persistent storage and auth.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link
@@ -87,11 +87,27 @@ export default async function OrdersPage() {
             <Plus className="size-4" />
           </Link>
         </div>
-        <div className="grid gap-4">
-          {activeOrders.map((order) => (
-            <OrderCard key={order.id} order={order} />
-          ))}
-        </div>
+        {activeOrders.length > 0 ? (
+          <div className="grid gap-4">
+            {activeOrders.map((order) => (
+              <OrderCard key={order.id} order={order} />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-line bg-card p-8 text-center shadow-card">
+            <p className="font-display text-2xl font-black tracking-tight">No current orders yet</p>
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted">
+              Start the first order from this dashboard and it will appear here immediately.
+            </p>
+            <Link
+              href="/orders/new"
+              className="mt-5 inline-flex items-center gap-2 rounded-full bg-coral px-5 py-3 text-sm font-black text-white shadow-coral transition hover:-translate-y-0.5 hover:bg-coral-ink"
+            >
+              <Plus className="size-4" />
+              New Order
+            </Link>
+          </div>
+        )}
       </section>
 
       <section id="completed" className="mt-10">
@@ -102,34 +118,43 @@ export default async function OrdersPage() {
           <h2 className="mt-2 font-display text-3xl font-black tracking-tight">Ready for records</h2>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-line bg-card shadow-card">
-          <div className="hidden grid-cols-[1fr_150px_140px_170px] border-b border-line bg-paper px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-muted md:grid">
-            <span>Order</span>
-            <span>Completed</span>
-            <span>Amount</span>
-            <span>Invoice</span>
-          </div>
-          {completedOrders.map((order) => (
-            <div key={order.id} className="grid gap-3 border-b border-line px-5 py-4 last:border-b-0 md:grid-cols-[1fr_150px_140px_170px] md:items-center">
-              <div>
-                <p className="font-bold">{order.service}</p>
-                <p className="text-sm text-muted">{order.id} · {order.category}</p>
-              </div>
-              <p className="text-sm text-muted">{order.dueAt}</p>
-              <p className="font-display text-xl font-black">${order.amount.toLocaleString()}</p>
-              {order.invoiceId ? (
-                <a
-                  href={invoiceHref(order.invoiceId)}
-                  download={`${order.invoiceId}.txt`}
-                  className="inline-flex w-fit items-center gap-2 rounded-full bg-ink px-4 py-2 text-sm font-black text-paper transition hover:bg-violet"
-                >
-                  <Download className="size-4" />
-                  Download Invoice
-                </a>
-              ) : null}
+        {completedOrders.length > 0 ? (
+          <div className="overflow-hidden rounded-2xl border border-line bg-card shadow-card">
+            <div className="hidden grid-cols-[1fr_150px_140px_170px] border-b border-line bg-paper px-5 py-3 text-xs font-black uppercase tracking-[0.14em] text-muted md:grid">
+              <span>Order</span>
+              <span>Completed</span>
+              <span>Amount</span>
+              <span>Invoice</span>
             </div>
-          ))}
-        </div>
+            {completedOrders.map((order) => (
+              <div key={order.id} className="grid gap-3 border-b border-line px-5 py-4 last:border-b-0 md:grid-cols-[1fr_150px_140px_170px] md:items-center">
+                <div>
+                  <p className="font-bold">{order.service}</p>
+                  <p className="text-sm text-muted">{order.id} · {order.category}</p>
+                </div>
+                <p className="text-sm text-muted">{order.dueAt}</p>
+                <p className="font-display text-xl font-black">${order.amount.toLocaleString()}</p>
+                {order.invoiceId ? (
+                  <a
+                    href={invoiceHref(order.invoiceId)}
+                    download={`${order.invoiceId}.txt`}
+                    className="inline-flex w-fit items-center gap-2 rounded-full bg-ink px-4 py-2 text-sm font-black text-paper transition hover:bg-violet"
+                  >
+                    <Download className="size-4" />
+                    Download Invoice
+                  </a>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-2xl border border-dashed border-line bg-card p-8 text-center shadow-card">
+            <p className="font-display text-2xl font-black tracking-tight">No completed orders yet</p>
+            <p className="mx-auto mt-2 max-w-md text-sm text-muted">
+              Completed work and invoice downloads will appear here after fulfilment is finished.
+            </p>
+          </div>
+        )}
       </section>
     </DashboardShell>
   );

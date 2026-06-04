@@ -20,7 +20,7 @@ export default function NewOrderPage() {
             </h1>
           </div>
           <span className="w-fit rounded-full bg-lime px-4 py-2 text-sm font-black text-lime-ink">
-            Prototype form
+            Order request
           </span>
         </div>
       </div>
@@ -59,14 +59,14 @@ export default function NewOrderPage() {
                 <Target className="size-4 text-violet" />
                 Campaign name
               </span>
-              <input name="service" className="w-full rounded-xl border border-line bg-paper px-4 py-3 outline-none transition focus:border-violet focus:ring-4 focus:ring-violet/15" defaultValue="June authority sprint" />
+              <input name="service" required className="w-full rounded-xl border border-line bg-paper px-4 py-3 outline-none transition focus:border-violet focus:ring-4 focus:ring-violet/15" placeholder="June authority sprint" />
             </label>
             <label className="block">
               <span className="mb-2 flex items-center gap-2 text-sm font-black">
                 <Link2 className="size-4 text-violet" />
                 Target URL
               </span>
-              <input name="targetUrl" className="w-full rounded-xl border border-line bg-paper px-4 py-3 outline-none transition focus:border-violet focus:ring-4 focus:ring-violet/15" placeholder="https://example.com/page" />
+              <input name="targetUrl" required type="url" className="w-full rounded-xl border border-line bg-paper px-4 py-3 outline-none transition focus:border-violet focus:ring-4 focus:ring-violet/15" placeholder="https://example.com/page" />
             </label>
             <label className="block">
               <span className="mb-2 flex items-center gap-2 text-sm font-black">
@@ -95,26 +95,26 @@ export default function NewOrderPage() {
             <textarea
               name="brief"
               className="min-h-36 w-full rounded-xl border border-line bg-paper px-4 py-3 outline-none transition focus:border-violet focus:ring-4 focus:ring-violet/15"
-              defaultValue="We want placements for our main product page with branded and partial-match anchors. Avoid coupon, casino, and generic directory sites."
+              placeholder="Share goals, target anchors, restrictions, competitors, and any sites to avoid."
             />
           </label>
         </section>
 
         <aside className="h-fit rounded-3xl border border-line bg-ink p-5 text-paper shadow-soft sm:p-6">
           <p className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-lime">Order summary</p>
-          <h2 className="mt-3 font-display text-3xl font-black tracking-tight">Authority Starter</h2>
+          <h2 className="mt-3 font-display text-3xl font-black tracking-tight">New order request</h2>
           <p className="mt-3 text-sm leading-6 text-[#d9d5e2]">
-            This mock submission keeps the prototype working while the production checkout and billing source are selected.
+            Submit the brief and the request will be added to Current Orders for team review.
           </p>
 
           <div className="mt-6 space-y-3 rounded-2xl border border-white/10 bg-white/8 p-4">
             <div className="flex justify-between gap-4 text-sm">
               <span className="text-[#d9d5e2]">Estimated subtotal</span>
-              <span className="font-black">$1,000 - $2,500</span>
+              <span className="font-black">Based on budget</span>
             </div>
             <div className="flex justify-between gap-4 text-sm">
               <span className="text-[#d9d5e2]">Delivery</span>
-              <span className="font-black">14-21 days</span>
+              <span className="font-black">Selected window</span>
             </div>
             <div className="flex justify-between gap-4 text-sm">
               <span className="text-[#d9d5e2]">Next step</span>

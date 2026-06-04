@@ -1,5 +1,5 @@
 import { unstable_noStore as noStore } from "next/cache";
-import { seedOrders, serviceOptions, type Order } from "@/lib/orders";
+import { serviceOptions, type Order } from "@/lib/orders";
 
 export type CreateOrderInput = {
   category: Order["category"];
@@ -26,13 +26,11 @@ const globalForOrders = globalThis as typeof globalThis & {
   __infloOrderStore?: OrderStore;
 };
 
-const cloneSeedOrders = () => seedOrders.map((order) => ({ ...order, deliverables: [...order.deliverables] }));
-
 function getStore() {
   if (!globalForOrders.__infloOrderStore) {
     globalForOrders.__infloOrderStore = {
-      orders: cloneSeedOrders(),
-      nextId: 48202
+      orders: [],
+      nextId: 1
     };
   }
 
@@ -75,7 +73,7 @@ export async function getDashboardData() {
   const completedOrders = orders.filter((order) => order.status === "Completed");
   const averageProgress = activeOrders.length
     ? Math.round(activeOrders.reduce((sum, order) => sum + order.progress, 0) / activeOrders.length)
-    : 100;
+    : 0;
 
   const stats: DashboardStat[] = [
     {
@@ -124,7 +122,7 @@ export async function createOrder(input: CreateOrderInput) {
     dueAt: formatDate(dueAt),
     amount: service?.startingPrice ?? 500,
     progress: 12,
-    targetUrl: input.targetUrl.trim() || "https://example.com",
+    targetUrl: input.targetUrl.trim(),
     deliverables: [
       "Brief received by fulfilment team",
       `Budget range: ${input.budgetRange}`,
@@ -150,14 +148,24 @@ export function parseCreateOrderInput(source: FormData | Record<string, unknown>
     throw new Error("Invalid delivery window.");
   }
 
-  return {
+  const parsed = {
     category,
-    service: String(get("service") || ""),
-    targetUrl: String(get("targetUrl") || ""),
+    service: String(get("service") || "").trim(),
+    targetUrl: String(get("targetUrl") || "").trim(),
     deliveryWindow,
     budgetRange: String(get("budgetRange") || "1000-2500"),
-    brief: String(get("brief") || "")
+    brief: String(get("brief") || "").trim()
   };
+
+  if (!parsed.service) {
+    throw new Error("Campaign name is required.");
+  }
+
+  if (!parsed.targetUrl) {
+    throw new Error("Target URL is required.");
+  }
+
+  return parsed;
 }
 
 function isCategory(value: string): value is Order["category"] {
