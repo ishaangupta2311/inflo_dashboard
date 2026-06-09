@@ -1,5 +1,8 @@
 import { unstable_noStore as noStore } from "next/cache";
-import { serviceOptions, type Order } from "@/lib/orders";
+import { auth } from "@clerk/nextjs/server";
+import { prisma } from "@/lib/prisma";
+import { serviceOptions, type Order, type OrderStatus } from "@/lib/orders";
+import type { Order as OrderRow } from "@/generated/prisma/client";
 
 export type CreateOrderInput = {
   category: Order["category"];
@@ -10,11 +13,6 @@ export type CreateOrderInput = {
   brief: string;
 };
 
-type OrderStore = {
-  orders: Order[];
-  nextId: number;
-};
-
 type DashboardStat = {
   label: string;
   value: string;
@@ -22,46 +20,68 @@ type DashboardStat = {
   tone: "violet" | "ink" | "coral";
 };
 
-const globalForOrders = globalThis as typeof globalThis & {
-  __infloOrderStore?: OrderStore;
-};
+async function requireUserId() {
+  const { userId } = await auth();
 
-function getStore() {
-  if (!globalForOrders.__infloOrderStore) {
-    globalForOrders.__infloOrderStore = {
-      orders: [],
-      nextId: 1
-    };
+  if (!userId) {
+    throw new Error("Not authenticated.");
   }
 
-  return globalForOrders.__infloOrderStore;
+  return userId;
+}
+
+function toOrder(row: OrderRow): Order {
+  return {
+    id: row.id,
+    service: row.service,
+    category: row.category as Order["category"],
+    status: row.status as OrderStatus,
+    orderedAt: formatDate(row.orderedAt),
+    dueAt: formatDate(row.dueAt),
+    amount: row.amount,
+    progress: row.progress,
+    targetUrl: row.targetUrl,
+    deliverables: row.deliverables,
+    owner: row.owner,
+    invoiceId: row.invoiceId ?? undefined
+  };
 }
 
 export async function listOrders() {
   noStore();
-  return getStore().orders;
+  const userId = await requireUserId();
+  const rows = await prisma.order.findMany({
+    where: { userId },
+    orderBy: { createdAt: "desc" }
+  });
+
+  return rows.map(toOrder);
 }
 
 export async function getOrder(id: string) {
   noStore();
-  return getStore().orders.find((order) => order.id === id);
+  const userId = await requireUserId();
+  const row = await prisma.order.findFirst({ where: { id, userId } });
+
+  return row ? toOrder(row) : undefined;
 }
 
 export async function getInvoice(invoiceId: string) {
   noStore();
-  const order = getStore().orders.find((candidate) => candidate.invoiceId === invoiceId);
+  const userId = await requireUserId();
+  const row = await prisma.order.findFirst({ where: { invoiceId, userId } });
 
-  if (!order) {
+  if (!row) {
     return undefined;
   }
 
   return [
     "Influencer Outreach Solutions",
     `Invoice: ${invoiceId}`,
-    `Order: ${order.id}`,
-    `Service: ${order.service}`,
-    `Amount: $${order.amount.toLocaleString("en-US")}`,
-    `Completed: ${order.dueAt}`,
+    `Order: ${row.id}`,
+    `Service: ${row.service}`,
+    `Amount: $${row.amount.toLocaleString("en-US")}`,
+    `Completed: ${formatDate(row.dueAt)}`,
     "",
     "Prototype invoice export. Production will return a generated PDF from the billing system."
   ].join("\n");
@@ -106,33 +126,33 @@ export async function getDashboardData() {
 
 export async function createOrder(input: CreateOrderInput) {
   noStore();
-  const store = getStore();
+  const userId = await requireUserId();
   const service = serviceOptions.find((option) => option.name === input.category);
-  const id = `INF-${store.nextId++}`;
-  const created = new Date();
-  const dueAt = new Date(created);
-  dueAt.setDate(created.getDate() + deliveryDays(input.deliveryWindow));
+  const orderedAt = new Date();
+  const dueAt = new Date(orderedAt);
+  dueAt.setDate(orderedAt.getDate() + deliveryDays(input.deliveryWindow));
 
-  const order: Order = {
-    id,
-    service: input.service.trim() || `${input.category} order`,
-    category: input.category,
-    status: "Brief received",
-    orderedAt: formatDate(created),
-    dueAt: formatDate(dueAt),
-    amount: service?.startingPrice ?? 500,
-    progress: 12,
-    targetUrl: input.targetUrl.trim(),
-    deliverables: [
-      "Brief received by fulfilment team",
-      `Budget range: ${input.budgetRange}`,
-      input.brief.trim() ? `Client note: ${input.brief.trim().slice(0, 96)}` : "Team review pending"
-    ],
-    owner: "Client Success"
-  };
+  const row = await prisma.order.create({
+    data: {
+      userId,
+      service: input.service.trim() || `${input.category} order`,
+      category: input.category,
+      status: "Brief received",
+      orderedAt,
+      dueAt,
+      amount: service?.startingPrice ?? 500,
+      progress: 12,
+      targetUrl: input.targetUrl.trim(),
+      deliverables: [
+        "Brief received by fulfilment team",
+        `Budget range: ${input.budgetRange}`,
+        input.brief.trim() ? `Client note: ${input.brief.trim().slice(0, 96)}` : "Team review pending"
+      ],
+      owner: "Client Success"
+    }
+  });
 
-  store.orders = [order, ...store.orders];
-  return order;
+  return toOrder(row);
 }
 
 export function parseCreateOrderInput(source: FormData | Record<string, unknown>): CreateOrderInput {

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SignInButton, SignUpButton, Show, UserButton } from "@clerk/nextjs";
 import { Bell, FileText, LayoutDashboard, Plus, Settings, ShoppingBag } from "lucide-react";
 
 const navItems = [
@@ -53,9 +54,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <header className="sticky top-0 z-10 border-b border-line bg-paper/88 backdrop-blur-xl">
           <div className="flex min-h-20 items-center justify-between gap-4 px-4 sm:px-6 lg:px-10">
             <div>
-              <div className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-violet">
-                app.influenceroutreachsolutions.com
-              </div>
               <h1 className="font-display text-2xl font-black tracking-tight sm:text-3xl">
                 Client dashboard
               </h1>
@@ -72,6 +70,22 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                 <Plus className="size-4" />
                 New Order
               </Link>
+
+              <Show when="signed-out">
+                <SignInButton mode="modal">
+                  <button className="rounded-full border border-line bg-card px-4 py-3 text-sm font-black text-ink transition hover:border-ink">
+                    Sign in
+                  </button>
+                </SignInButton>
+                <SignUpButton mode="modal">
+                  <button className="rounded-full bg-ink px-4 py-3 text-sm font-black text-paper transition hover:-translate-y-0.5">
+                    Sign up
+                  </button>
+                </SignUpButton>
+              </Show>
+              <Show when="signed-in">
+                <UserButton />
+              </Show>
             </div>
           </div>
         </header>
