@@ -9,7 +9,7 @@ export const STAFF_ROLES: StaffRole[] = ["admin", "sub-admin", "employee"];
 export const ROLE_LABEL: Record<StaffRole, string> = {
   admin: "Admin",
   "sub-admin": "Sub-admin",
-  employee: "Employee"
+  employee: "Team member"
 };
 
 const ROLE_RANK: Record<StaffRole, number> = { admin: 3, "sub-admin": 2, employee: 1 };

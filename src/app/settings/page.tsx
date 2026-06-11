@@ -70,7 +70,7 @@ export default async function SettingsPage() {
           <p className="mt-1 text-sm text-muted">
             {role === "admin"
               ? "Add and manage everyone who can run the dashboard — they can view and update every client's orders."
-              : "Add and manage employee accounts — they can view and update every client's orders."}
+              : "Add and manage team member accounts — they can view and update every client's orders."}
           </p>
 
           <AddMemberForm roles={grantable} />
