@@ -1,6 +1,7 @@
 import {ClerkProvider} from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Hanken_Grotesk, Space_Mono } from "next/font/google";
+import { CartProvider } from "@/components/cart-context";
 import "./globals.css";
 
 const display = Bricolage_Grotesque({
@@ -29,7 +30,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en">
       <body className={`${display.variable} ${body.variable} ${mono.variable}`}>
         <ClerkProvider>
-          {children}
+          <CartProvider>
+            {children}
+          </CartProvider>
         </ClerkProvider>
       </body>
     </html>

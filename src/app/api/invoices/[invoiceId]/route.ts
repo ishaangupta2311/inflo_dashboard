@@ -1,20 +1,23 @@
-import { getInvoice } from "@/lib/order-backend";
+import { getInvoicePdf } from "@/lib/order-backend";
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ invoiceId: string }> }
 ) {
   const { invoiceId } = await params;
-  const invoice = await getInvoice(invoiceId);
+  const invoice = await getInvoicePdf(invoiceId);
 
   if (!invoice) {
     return Response.json({ error: "Invoice not found." }, { status: 404 });
   }
 
-  return new Response(invoice, {
+  // Copy into a fresh ArrayBuffer-backed array so the body type matches BodyInit
+  // (pdf-lib returns Uint8Array<ArrayBufferLike>).
+  return new Response(new Uint8Array(invoice.bytes), {
     headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${invoiceId}.txt"`
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${invoice.filename}"`,
+      "Cache-Control": "no-store"
     }
   });
 }

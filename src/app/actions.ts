@@ -2,11 +2,47 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createOrder, parseCreateOrderInput } from "@/lib/order-backend";
+import {
+  acceptQuote,
+  createOrdersFromCart,
+  createQuoteRequest,
+  type CartLine
+} from "@/lib/order-backend";
 
-export async function createOrderAction(formData: FormData) {
-  const order = await createOrder(parseCreateOrderInput(formData));
+export type CheckoutResult = { ok: true; count: number } | { ok: false; error: string };
+
+export async function checkoutAction(input: {
+  lines: CartLine[];
+  targetUrl: string;
+  brief?: string;
+}): Promise<CheckoutResult> {
+  try {
+    const orders = await createOrdersFromCart(input);
+    revalidatePath("/orders");
+    return { ok: true, count: orders.length };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Checkout failed." };
+  }
+}
+
+export async function createQuoteRequestAction(formData: FormData) {
+  const order = await createQuoteRequest({
+    slug: String(formData.get("slug") || ""),
+    targetUrl: String(formData.get("targetUrl") || ""),
+    brief: String(formData.get("brief") || "")
+  });
 
   revalidatePath("/orders");
   redirect(`/orders?created=${encodeURIComponent(order.id)}`);
+}
+
+export async function acceptQuoteAction(formData: FormData) {
+  const orderId = String(formData.get("orderId") || "");
+  if (!orderId) {
+    return;
+  }
+
+  await acceptQuote(orderId);
+  revalidatePath(`/orders/${orderId}`);
+  revalidatePath("/orders");
 }

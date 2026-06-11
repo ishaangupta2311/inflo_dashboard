@@ -1,4 +1,4 @@
-import { Bot, Link2, Megaphone, PackageCheck, Store, TrendingUp } from "lucide-react";
+import { Bot, Link2, Megaphone, Store, TrendingUp } from "lucide-react";
 import type { ComponentType } from "react";
 
 export type OrderStatus =
@@ -21,6 +21,7 @@ export type Order = {
   deliverables: string[];
   owner: string;
   invoiceId?: string;
+  quoteStatus?: string;
 };
 
 export type ServiceOption = {
@@ -70,8 +71,13 @@ export const money = (amount: number) =>
     maximumFractionDigits: 0
   }).format(amount);
 
-export const iconForCategory = (category: Order["category"]) =>
-  serviceOptions.find((option) => option.name === category)?.icon ?? PackageCheck;
+export const categoryIcons: Record<Order["category"], ComponentType<{ className?: string }>> = {
+  "Link Building": Link2,
+  "Digital PR": Megaphone,
+  "AI SEO": Bot,
+  "SEO Reseller": Store,
+  Grow: TrendingUp
+};
 
 export const invoiceHref = (invoiceId: string) =>
   `/api/invoices/${encodeURIComponent(invoiceId)}`;

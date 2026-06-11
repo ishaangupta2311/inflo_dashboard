@@ -13,11 +13,17 @@ datasource db {
 model Order {
   id           String   @id @default(cuid())
   userId       String
+  userEmail    String?
   service      String
   category     String
+  packageId    String?
+  packageName  String?
+  billing      String   @default("one_time") // "one_time" | "monthly"
+  quoteStatus  String? // null for fixed-price buys; "requested" | "quoted" | "accepted" for quote items
   status       String   @default("Brief received")
   orderedAt    DateTime @default(now())
   dueAt        DateTime
+  completedAt  DateTime?
   amount       Int
   progress     Int      @default(12)
   targetUrl    String
@@ -27,6 +33,37 @@ model Order {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  updates      OrderUpdate[]
+
   @@index([userId])
   @@map("orders")
+}
+
+model OrderUpdate {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  authorId   String
+  authorName String   @default("Influencer Outreach")
+  body       String
+  status     String? // the status the order moved to alongside this update, if any
+  createdAt  DateTime @default(now())
+
+  @@index([orderId])
+  @@map("order_updates")
+}
+
+// Mirror of Clerk users, kept in sync by the /api/webhooks/clerk handler.
+// Orders reference userId as a plain string (no FK) because webhook delivery is
+// eventually consistent — an order can be created before this row exists.
+model User {
+  id        String   @id // Clerk user id
+  email     String?
+  firstName String?
+  lastName  String?
+  imageUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
 }

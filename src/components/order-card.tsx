@@ -1,5 +1,6 @@
-import { Bot, Download, ExternalLink, Link2, Megaphone, PackageCheck, Store, TrendingUp } from "lucide-react";
-import { invoiceHref, money, type Order } from "@/lib/orders";
+import Link from "next/link";
+import { Download, ExternalLink } from "lucide-react";
+import { categoryIcons, invoiceHref, money, type Order } from "@/lib/orders";
 
 const statusTone: Record<Order["status"], string> = {
   "Brief received": "bg-violet-soft text-violet-ink",
@@ -8,14 +9,6 @@ const statusTone: Record<Order["status"], string> = {
   Publishing: "bg-lime text-lime-ink",
   Completed: "bg-mint text-white"
 };
-
-const categoryIcons = {
-  "Link Building": Link2,
-  "Digital PR": Megaphone,
-  "AI SEO": Bot,
-  "SEO Reseller": Store,
-  Grow: TrendingUp
-} satisfies Record<Order["category"], typeof PackageCheck>;
 
 export function OrderCard({ order }: { order: Order }) {
   const Icon = categoryIcons[order.category];
@@ -69,22 +62,27 @@ export function OrderCard({ order }: { order: Order }) {
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted">Amount</p>
-              <p className="mt-1 font-display text-3xl font-black">{money(order.amount)}</p>
+              <p className="mt-1 font-display text-3xl font-black">
+                {order.quoteStatus === "requested" ? "Pending" : money(order.amount)}
+              </p>
             </div>
             {invoiceId ? (
               <a
                 href={invoiceHref(invoiceId)}
-                download={`${invoiceId}.txt`}
+                download={`${invoiceId}.pdf`}
                 className="inline-flex items-center gap-2 rounded-full bg-ink px-3 py-2 text-xs font-black text-paper transition hover:bg-violet"
               >
                 <Download className="size-4" />
                 Invoice
               </a>
             ) : (
-              <button className="inline-flex items-center gap-2 rounded-full border border-line bg-card px-3 py-2 text-xs font-black text-muted">
+              <Link
+                href={`/orders/${order.id}`}
+                className="inline-flex items-center gap-2 rounded-full border border-line bg-card px-3 py-2 text-xs font-black text-ink transition hover:border-ink"
+              >
                 <ExternalLink className="size-4" />
                 Details
-              </button>
+              </Link>
             )}
           </div>
 

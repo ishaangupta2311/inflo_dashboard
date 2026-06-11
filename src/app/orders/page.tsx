@@ -51,12 +51,12 @@ export default async function OrdersPage() {
           </div>
           <div className="flex flex-col justify-between gap-6 rounded-2xl border border-white/10 bg-white/8 p-5">
             <p className="text-sm leading-6 text-[#d9d5e2]">
-              This prototype mirrors the future production dashboard at app.influenceroutreachsolutions.com.
-              Orders and invoice downloads are served by Next.js backend routes today, ready for persistent storage and auth.
+              Your orders and invoice downloads are saved securely to your account
+              and synced in real time across every device you sign in from.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link
-                href="/orders/new"
+                href="/store"
                 className="inline-flex items-center gap-2 rounded-full bg-lime px-4 py-3 text-sm font-black text-ink transition hover:-translate-y-0.5"
               >
                 <Plus className="size-4" />
@@ -82,7 +82,7 @@ export default async function OrdersPage() {
             </p>
             <h2 className="mt-2 font-display text-3xl font-black tracking-tight">In delivery</h2>
           </div>
-          <Link href="/orders/new" className="hidden items-center gap-2 rounded-full border border-ink px-4 py-2 text-sm font-black sm:inline-flex">
+          <Link href="/store" className="hidden items-center gap-2 rounded-full border border-ink px-4 py-2 text-sm font-black sm:inline-flex">
             New Order
             <Plus className="size-4" />
           </Link>
@@ -100,7 +100,7 @@ export default async function OrdersPage() {
               Start the first order from this dashboard and it will appear here immediately.
             </p>
             <Link
-              href="/orders/new"
+              href="/store"
               className="mt-5 inline-flex items-center gap-2 rounded-full bg-coral px-5 py-3 text-sm font-black text-white shadow-coral transition hover:-translate-y-0.5 hover:bg-coral-ink"
             >
               <Plus className="size-4" />
@@ -137,7 +137,7 @@ export default async function OrdersPage() {
                 {order.invoiceId ? (
                   <a
                     href={invoiceHref(order.invoiceId)}
-                    download={`${order.invoiceId}.txt`}
+                    download={`${order.invoiceId}.pdf`}
                     className="inline-flex w-fit items-center gap-2 rounded-full bg-ink px-4 py-2 text-sm font-black text-paper transition hover:bg-violet"
                   >
                     <Download className="size-4" />

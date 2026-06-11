@@ -1,14 +1,18 @@
 import Link from "next/link";
 import { SignInButton, SignUpButton, Show, UserButton } from "@clerk/nextjs";
-import { Bell, FileText, LayoutDashboard, Plus, Settings, ShoppingBag } from "lucide-react";
+import { LayoutDashboard, Plus } from "lucide-react";
+import { CartButton } from "@/components/cart-button";
+import { NotificationsBell } from "@/components/notifications-bell";
+import { SidebarNav } from "@/components/sidebar-nav";
+import { isAdmin } from "@/lib/auth";
+import { listRecentUpdatesForUser } from "@/lib/order-backend";
 
-const navItems = [
-  { label: "Orders", href: "/orders", icon: ShoppingBag, active: true },
-  { label: "Invoices", href: "/orders#completed", icon: FileText },
-  { label: "Settings", href: "#", icon: Settings }
-];
+export async function DashboardShell({ children }: { children: React.ReactNode }) {
+  const [admin, updates] = await Promise.all([
+    isAdmin(),
+    listRecentUpdatesForUser().catch(() => [])
+  ]);
 
-export function DashboardShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-paper text-ink">
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 border-r border-line bg-card/80 px-5 py-6 backdrop-blur-xl lg:block">
@@ -22,30 +26,17 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </span>
         </Link>
 
-        <nav className="mt-10 space-y-2">
-          {navItems.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition ${
-                item.active
-                  ? "bg-ink text-paper shadow-soft"
-                  : "text-muted hover:bg-paper-2 hover:text-ink"
-              }`}
-            >
-              <item.icon className="size-4" />
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        <SidebarNav admin={admin} />
 
         <div className="absolute inset-x-5 bottom-6 rounded-2xl border border-line bg-paper p-4">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-violet">
             <LayoutDashboard className="size-4" />
-            Prototype
+            {admin ? "Admin access" : "Your account"}
           </div>
           <p className="mt-3 text-sm leading-5 text-muted">
-            Mock orders and invoice downloads are wired through typed local data for now.
+            {admin
+              ? "You can update any client's order status and publish updates from the Admin area."
+              : "Orders, progress updates, and invoices are saved to your account in real time."}
           </p>
         </div>
       </aside>
@@ -55,20 +46,19 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           <div className="flex min-h-20 items-center justify-between gap-4 px-4 sm:px-6 lg:px-10">
             <div>
               <h1 className="font-display text-2xl font-black tracking-tight sm:text-3xl">
-                Client dashboard
+                {admin ? "Operations dashboard" : "Client dashboard"}
               </h1>
             </div>
 
             <div className="flex items-center gap-2">
-              <button className="grid size-11 place-items-center rounded-xl border border-line bg-card text-muted transition hover:border-ink hover:text-ink">
-                <Bell className="size-5" />
-              </button>
+              <NotificationsBell updates={updates} />
+              <CartButton />
               <Link
-                href="/orders/new"
+                href="/store"
                 className="inline-flex items-center gap-2 rounded-full bg-coral px-4 py-3 text-sm font-black text-white shadow-coral transition hover:-translate-y-0.5 hover:bg-coral-ink"
               >
                 <Plus className="size-4" />
-                New Order
+                Order services
               </Link>
 
               <Show when="signed-out">
