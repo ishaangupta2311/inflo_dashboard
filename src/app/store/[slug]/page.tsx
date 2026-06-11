@@ -4,14 +4,14 @@ import { ArrowLeft, Check, ExternalLink, Link2, Star, Target } from "lucide-reac
 import { createQuoteRequestAction } from "@/app/actions";
 import { AddToCartButton } from "@/components/add-to-cart-button";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { isAdmin } from "@/lib/auth";
+import { isStaff } from "@/lib/auth";
 import { catalogBySlug } from "@/lib/catalog";
 import { money } from "@/lib/orders";
 
 export default async function StoreServicePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  if (await isAdmin()) {
+  if (await isStaff()) {
     redirect("/admin");
   }
 

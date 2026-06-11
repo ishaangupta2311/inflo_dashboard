@@ -1,16 +1,18 @@
 export {};
 
-// Types the admin role on both Clerk surfaces we read it from:
+// Types the staff role on both Clerk surfaces we read it from:
 //  - session-token claim (fast path; requires the dashboard claim
 //    { "metadata": "{{user.public_metadata}}" } to be present)
 //  - publicMetadata read directly via currentUser() (always works)
+// `null` is permitted on publicMetadata so we can clear the key (Clerk removes a
+// metadata field when it's set to null) to revoke a member's staff access.
 declare global {
   interface CustomJwtSessionClaims {
     metadata?: {
-      role?: "admin";
+      role?: "admin" | "sub-admin" | "employee" | null;
     };
   }
   interface UserPublicMetadata {
-    role?: "admin";
+    role?: "admin" | "sub-admin" | "employee" | null;
   }
 }

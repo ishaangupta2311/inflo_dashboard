@@ -12,21 +12,22 @@ type NavItem = {
   activePrefix?: string;
 };
 
-export function SidebarNav({ admin }: { admin: boolean }) {
+export function SidebarNav({ staff }: { staff: boolean }) {
   const pathname = usePathname();
 
-  // Admins get a management-only nav (no Store/cart/buy flow); their "Orders"
-  // points at the admin console where they manage every client's orders.
-  const items: NavItem[] = admin
+  // Staff (admin / sub-admin / employee) get a management-only nav — no Store or
+  // cart — and their "Orders" points at the console where they manage every
+  // client's orders. Team management lives inside Settings.
+  const items: NavItem[] = staff
     ? [
         { label: "Orders", href: "/admin", icon: ShoppingBag, activePrefix: "/admin" },
-        { label: "Settings", href: "#", icon: Settings }
+        { label: "Settings", href: "/settings", icon: Settings, activePrefix: "/settings" }
       ]
     : [
         { label: "Orders", href: "/orders", icon: ShoppingBag, activePrefix: "/orders" },
         { label: "Store", href: "/store", icon: Store, activePrefix: "/store" },
         { label: "Invoices", href: "/orders#completed", icon: FileText },
-        { label: "Settings", href: "#", icon: Settings }
+        { label: "Settings", href: "/settings", icon: Settings, activePrefix: "/settings" }
       ];
 
   const isActive = (item: NavItem) =>

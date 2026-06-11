@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Download, FileText, PackageCheck, Plus, TrendingUp } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { OrderCard } from "@/components/order-card";
-import { isAdmin } from "@/lib/auth";
+import { isStaff } from "@/lib/auth";
 import { getDashboardData } from "@/lib/order-backend";
 import { invoiceHref } from "@/lib/orders";
 
@@ -14,7 +14,7 @@ const statIcons = {
 };
 
 export default async function OrdersPage() {
-  if (await isAdmin()) {
+  if (await isStaff()) {
     redirect("/admin");
   }
 

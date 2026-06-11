@@ -2,7 +2,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { requireAdmin } from "@/lib/auth";
+import { requireStaff } from "@/lib/auth";
 import { catalogBySlug, findBuyable } from "@/lib/catalog";
 import { serviceOptions, type Order, type OrderStatus } from "@/lib/orders";
 import type { Order as OrderRow, OrderUpdate as OrderUpdateRow } from "@/generated/prisma/client";
@@ -475,14 +475,14 @@ export type OrderMutationInput = {
 
 export async function listAllOrders(): Promise<AdminOrder[]> {
   noStore();
-  await requireAdmin();
+  await requireStaff();
   const rows = await prisma.order.findMany({ orderBy: { createdAt: "desc" } });
   return rows.map(toAdminOrder);
 }
 
 export async function getAdminOrder(id: string): Promise<AdminOrderDetail | undefined> {
   noStore();
-  await requireAdmin();
+  await requireStaff();
   const row = await prisma.order.findUnique({
     where: { id },
     include: { updates: { orderBy: { createdAt: "desc" } } }
@@ -497,7 +497,7 @@ export async function getAdminOrder(id: string): Promise<AdminOrderDetail | unde
 
 export async function updateOrder(orderId: string, input: OrderMutationInput): Promise<AdminOrder> {
   noStore();
-  const adminId = await requireAdmin();
+  const { userId: adminId } = await requireStaff();
   const admin = await currentUser();
 
   const existing = await prisma.order.findUnique({ where: { id: orderId } });
@@ -552,7 +552,7 @@ export async function updateOrder(orderId: string, input: OrderMutationInput): P
 
 export async function addOrderUpdate(orderId: string, body: string): Promise<OrderUpdateEntry> {
   noStore();
-  const adminId = await requireAdmin();
+  const { userId: adminId } = await requireStaff();
   const admin = await currentUser();
   const text = body.trim();
 

@@ -4,19 +4,19 @@ import { LayoutDashboard, Plus } from "lucide-react";
 import { CartButton } from "@/components/cart-button";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { SidebarNav } from "@/components/sidebar-nav";
-import { isAdmin } from "@/lib/auth";
+import { isStaff } from "@/lib/auth";
 import { listRecentUpdatesForUser } from "@/lib/order-backend";
 
 export async function DashboardShell({ children }: { children: React.ReactNode }) {
-  const admin = await isAdmin();
-  // Admins manage other people's orders — they have no personal order feed,
-  // so skip the notifications query entirely for them.
-  const updates = admin ? [] : await listRecentUpdatesForUser().catch(() => []);
+  const staff = await isStaff();
+  // Staff manage other people's orders — they have no personal order feed, so
+  // skip the notifications query entirely for them.
+  const updates = staff ? [] : await listRecentUpdatesForUser().catch(() => []);
 
   return (
     <div className="min-h-screen bg-paper text-ink">
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 border-r border-line bg-card/80 px-5 py-6 backdrop-blur-xl lg:block">
-        <Link href={admin ? "/admin" : "/orders"} className="flex items-center gap-3">
+        <Link href={staff ? "/admin" : "/orders"} className="flex items-center gap-3">
           <span className="grid size-10 -rotate-6 place-items-center rounded-xl bg-ink font-display text-lg font-black text-lime">
             IO
           </span>
@@ -26,16 +26,16 @@ export async function DashboardShell({ children }: { children: React.ReactNode }
           </span>
         </Link>
 
-        <SidebarNav admin={admin} />
+        <SidebarNav staff={staff} />
 
         <div className="absolute inset-x-5 bottom-6 rounded-2xl border border-line bg-paper p-4">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-violet">
             <LayoutDashboard className="size-4" />
-            {admin ? "Admin access" : "Your account"}
+            {staff ? "Staff access" : "Your account"}
           </div>
           <p className="mt-3 text-sm leading-5 text-muted">
-            {admin
-              ? "You can update any client's order status and publish updates from the Admin area."
+            {staff
+              ? "Manage and update any client's order status and publish updates from the console."
               : "Orders, progress updates, and invoices are saved to your account in real time."}
           </p>
         </div>
@@ -46,12 +46,12 @@ export async function DashboardShell({ children }: { children: React.ReactNode }
           <div className="flex min-h-20 items-center justify-between gap-4 px-4 sm:px-6 lg:px-10">
             <div>
               <h1 className="font-display text-2xl font-black tracking-tight sm:text-3xl">
-                {admin ? "Operations dashboard" : "Client dashboard"}
+                {staff ? "Operations dashboard" : "Client dashboard"}
               </h1>
             </div>
 
             <div className="flex items-center gap-2">
-              {!admin ? (
+              {!staff ? (
                 <>
                   <NotificationsBell updates={updates} />
                   <CartButton />

@@ -3,10 +3,10 @@ import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { CartView } from "@/components/cart-view";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { isAdmin } from "@/lib/auth";
+import { isStaff } from "@/lib/auth";
 
 export default async function CartPage() {
-  if (await isAdmin()) {
+  if (await isStaff()) {
     redirect("/admin");
   }
 

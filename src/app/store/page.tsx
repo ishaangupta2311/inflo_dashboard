@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ArrowRight, Check, Sparkles } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard-shell";
-import { isAdmin } from "@/lib/auth";
+import { isStaff } from "@/lib/auth";
 import { catalog, type CatalogService } from "@/lib/catalog";
 import { money } from "@/lib/orders";
 
@@ -15,7 +15,7 @@ function fromPrice(service: CatalogService): number | null {
 }
 
 export default async function StorePage() {
-  if (await isAdmin()) {
+  if (await isStaff()) {
     redirect("/admin");
   }
 
