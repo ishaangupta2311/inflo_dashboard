@@ -8,15 +8,15 @@ import { isAdmin } from "@/lib/auth";
 import { listRecentUpdatesForUser } from "@/lib/order-backend";
 
 export async function DashboardShell({ children }: { children: React.ReactNode }) {
-  const [admin, updates] = await Promise.all([
-    isAdmin(),
-    listRecentUpdatesForUser().catch(() => [])
-  ]);
+  const admin = await isAdmin();
+  // Admins manage other people's orders — they have no personal order feed,
+  // so skip the notifications query entirely for them.
+  const updates = admin ? [] : await listRecentUpdatesForUser().catch(() => []);
 
   return (
     <div className="min-h-screen bg-paper text-ink">
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 border-r border-line bg-card/80 px-5 py-6 backdrop-blur-xl lg:block">
-        <Link href="/orders" className="flex items-center gap-3">
+        <Link href={admin ? "/admin" : "/orders"} className="flex items-center gap-3">
           <span className="grid size-10 -rotate-6 place-items-center rounded-xl bg-ink font-display text-lg font-black text-lime">
             IO
           </span>
@@ -51,15 +51,19 @@ export async function DashboardShell({ children }: { children: React.ReactNode }
             </div>
 
             <div className="flex items-center gap-2">
-              <NotificationsBell updates={updates} />
-              <CartButton />
-              <Link
-                href="/store"
-                className="inline-flex items-center gap-2 rounded-full bg-coral px-4 py-3 text-sm font-black text-white shadow-coral transition hover:-translate-y-0.5 hover:bg-coral-ink"
-              >
-                <Plus className="size-4" />
-                Order services
-              </Link>
+              {!admin ? (
+                <>
+                  <NotificationsBell updates={updates} />
+                  <CartButton />
+                  <Link
+                    href="/store"
+                    className="inline-flex items-center gap-2 rounded-full bg-coral px-4 py-3 text-sm font-black text-white shadow-coral transition hover:-translate-y-0.5 hover:bg-coral-ink"
+                  >
+                    <Plus className="size-4" />
+                    Order services
+                  </Link>
+                </>
+              ) : null}
 
               <Show when="signed-out">
                 <SignInButton mode="modal">

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileText, Settings, Shield, ShoppingBag, Store } from "lucide-react";
+import { FileText, Settings, ShoppingBag, Store } from "lucide-react";
 import type { ComponentType } from "react";
 
 type NavItem = {
@@ -15,13 +15,19 @@ type NavItem = {
 export function SidebarNav({ admin }: { admin: boolean }) {
   const pathname = usePathname();
 
-  const items: NavItem[] = [
-    { label: "Orders", href: "/orders", icon: ShoppingBag, activePrefix: "/orders" },
-    { label: "Store", href: "/store", icon: Store, activePrefix: "/store" },
-    ...(admin ? [{ label: "Admin", href: "/admin", icon: Shield, activePrefix: "/admin" }] : []),
-    { label: "Invoices", href: "/orders#completed", icon: FileText },
-    { label: "Settings", href: "#", icon: Settings }
-  ];
+  // Admins get a management-only nav (no Store/cart/buy flow); their "Orders"
+  // points at the admin console where they manage every client's orders.
+  const items: NavItem[] = admin
+    ? [
+        { label: "Orders", href: "/admin", icon: ShoppingBag, activePrefix: "/admin" },
+        { label: "Settings", href: "#", icon: Settings }
+      ]
+    : [
+        { label: "Orders", href: "/orders", icon: ShoppingBag, activePrefix: "/orders" },
+        { label: "Store", href: "/store", icon: Store, activePrefix: "/store" },
+        { label: "Invoices", href: "/orders#completed", icon: FileText },
+        { label: "Settings", href: "#", icon: Settings }
+      ];
 
   const isActive = (item: NavItem) =>
     item.activePrefix

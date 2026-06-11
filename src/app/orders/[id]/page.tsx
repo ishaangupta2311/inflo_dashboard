@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Download, ExternalLink, MessageSquare } from "lucide-react";
 import { acceptQuoteAction } from "@/app/actions";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { isAdmin } from "@/lib/auth";
 import { getOrderDetail } from "@/lib/order-backend";
 import { categoryIcons, invoiceHref, money, type OrderStatus } from "@/lib/orders";
 
@@ -16,6 +17,11 @@ const statusTone: Record<OrderStatus, string> = {
 
 export default async function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+
+  if (await isAdmin()) {
+    redirect(`/admin/orders/${id}`);
+  }
+
   const detail = await getOrderDetail(id);
 
   if (!detail) {

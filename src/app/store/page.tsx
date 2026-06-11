@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowRight, Check, Sparkles } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { isAdmin } from "@/lib/auth";
 import { catalog, type CatalogService } from "@/lib/catalog";
 import { money } from "@/lib/orders";
 
@@ -12,7 +14,11 @@ function fromPrice(service: CatalogService): number | null {
   return prices.length ? Math.min(...prices) : null;
 }
 
-export default function StorePage() {
+export default async function StorePage() {
+  if (await isAdmin()) {
+    redirect("/admin");
+  }
+
   return (
     <DashboardShell>
       <section className="overflow-hidden rounded-3xl border border-line bg-ink p-6 text-paper shadow-soft lg:p-8">

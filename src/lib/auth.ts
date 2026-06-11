@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { auth, currentUser } from "@clerk/nextjs/server";
 
 // Role resolution prefers the session-token claim (no extra API call, if the
@@ -5,7 +6,10 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 // publicMetadata directly via the Backend API. The fallback means admin works
 // without any dashboard session-token customization.
 
-export async function isAdmin(): Promise<boolean> {
+// Memoized per request (React cache) so the multiple call sites in a single
+// render — the page-level redirect guard plus DashboardShell — share one
+// currentUser() lookup instead of each hitting the Clerk Backend API.
+export const isAdmin = cache(async (): Promise<boolean> => {
   const { userId, sessionClaims } = await auth();
 
   if (!userId) {
@@ -17,7 +21,7 @@ export async function isAdmin(): Promise<boolean> {
 
   const user = await currentUser();
   return user?.publicMetadata?.role === "admin";
-}
+});
 
 /** Throws unless the caller is signed in AND an admin. Returns the Clerk userId. */
 export async function requireAdmin(): Promise<string> {

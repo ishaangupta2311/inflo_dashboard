@@ -1,9 +1,15 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { CartView } from "@/components/cart-view";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { isAdmin } from "@/lib/auth";
 
-export default function CartPage() {
+export default async function CartPage() {
+  if (await isAdmin()) {
+    redirect("/admin");
+  }
+
   return (
     <DashboardShell>
       <div className="mb-6">

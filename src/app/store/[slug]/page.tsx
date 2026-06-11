@@ -1,14 +1,20 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, Check, ExternalLink, Link2, Star, Target } from "lucide-react";
 import { createQuoteRequestAction } from "@/app/actions";
 import { AddToCartButton } from "@/components/add-to-cart-button";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { isAdmin } from "@/lib/auth";
 import { catalogBySlug } from "@/lib/catalog";
 import { money } from "@/lib/orders";
 
 export default async function StoreServicePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+
+  if (await isAdmin()) {
+    redirect("/admin");
+  }
+
   const service = catalogBySlug(slug);
 
   if (!service) {
