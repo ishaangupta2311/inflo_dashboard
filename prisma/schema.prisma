@@ -28,6 +28,8 @@ model Order {
   progress     Int      @default(12)
   linkTotal      Int    @default(0) // total links ordered (Link Building); 0 for non-link orders
   linksDelivered Int    @default(0) // links with a publish URL — denormalized for cheap listing
+  prTotal        Int    @default(0) // total PR features ordered (Digital PR); 0 for non-PR orders
+  prDelivered    Int    @default(0) // features with a publish date — denormalized for cheap listing
   targetUrl    String
   deliverables String[]
   owner        String   @default("Client Success")
@@ -37,6 +39,7 @@ model Order {
 
   updates      OrderUpdate[]
   links        OrderLink[]
+  prItems      OrderPrItem[]
 
   @@index([userId])
   @@map("orders")
@@ -61,6 +64,25 @@ model OrderLink {
 
   @@index([orderId])
   @@map("order_links")
+}
+
+// One row per individual media feature in a Digital PR order. Every column is
+// staff-filled; the client views them read-only. A non-empty publishDate marks
+// that feature published (delivered).
+model OrderPrItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  position    Int      // S.No (1-based)
+  title       String   @default("") // press release / feature title
+  docUrl      String   @default("") // PR doclink
+  publishDate String   @default("") // publish date (YYYY-MM-DD); non-empty ⇒ published
+  excelUrl    String   @default("") // publish excel link (Drive / direct / download)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([orderId])
+  @@map("order_pr_items")
 }
 
 model OrderUpdate {
