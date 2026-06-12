@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink, MessageSquarePlus } from "lucide-react";
 import { postUpdateAction } from "@/app/admin/actions";
-import { AutoRefresh } from "@/components/auto-refresh";
+import { OrderRealtime } from "@/components/order-realtime";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { ManageOrderForm } from "@/components/manage-order-form";
 import { OrderLinksTable } from "@/components/order-links-table";
@@ -24,7 +24,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
 
   return (
     <DashboardShell>
-      {isLinkOrder ? <AutoRefresh /> : null}
+      {isLinkOrder ? <OrderRealtime orderId={order.id} /> : null}
       <div className="mb-6">
         <Link href="/admin" className="inline-flex items-center gap-2 text-sm font-black text-muted transition hover:text-ink">
           <ArrowLeft className="size-4" />

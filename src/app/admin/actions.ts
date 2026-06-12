@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { addOrderUpdate, updateOrder, updateOrderLinksAdmin, type AdminLinkEdit } from "@/lib/order-backend";
+import { notifyOrderChanged } from "@/lib/realtime";
 import type { OrderStatus } from "@/lib/orders";
 
 export type SaveLinksResult = { ok: true } | { ok: false; error: string };
@@ -22,11 +23,12 @@ function parseNumber(value: FormDataEntryValue | null): number | undefined {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function revalidateOrder(orderId: string) {
+async function revalidateOrder(orderId: string) {
   revalidatePath(`/admin/orders/${orderId}`);
   revalidatePath("/admin");
   revalidatePath("/orders");
   revalidatePath(`/orders/${orderId}`);
+  await notifyOrderChanged(orderId);
 }
 
 export async function updateOrderAction(
@@ -54,7 +56,7 @@ export async function updateOrderAction(
     return { ok: false, error: error instanceof Error ? error.message : "Couldn't save changes." };
   }
 
-  revalidateOrder(orderId);
+  await revalidateOrder(orderId);
   return { ok: true };
 }
 
@@ -64,7 +66,7 @@ export async function updateOrderLinksAdminAction(input: {
 }): Promise<SaveLinksResult> {
   try {
     await updateOrderLinksAdmin(input);
-    revalidateOrder(input.orderId);
+    await revalidateOrder(input.orderId);
     return { ok: true };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "Couldn't save changes." };
@@ -79,5 +81,5 @@ export async function postUpdateAction(formData: FormData) {
   }
 
   await addOrderUpdate(orderId, body);
-  revalidateOrder(orderId);
+  await revalidateOrder(orderId);
 }
