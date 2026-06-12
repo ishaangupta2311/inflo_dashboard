@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Download, ExternalLink, MessageSquare } from "lucide-react";
 import { acceptQuoteAction } from "@/app/actions";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { OrderLinksTable } from "@/components/order-links-table";
 import { isStaff } from "@/lib/auth";
 import { getOrderDetail } from "@/lib/order-backend";
 import { categoryIcons, invoiceHref, money, type OrderStatus } from "@/lib/orders";
@@ -28,8 +29,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     notFound();
   }
 
-  const { order, updates } = detail;
+  const { order, updates, links } = detail;
   const Icon = categoryIcons[order.category];
+  const linkTotal = order.linkTotal ?? 0;
+  const linksDelivered = order.linksDelivered ?? 0;
+  const isLinkOrder = linkTotal > 0;
+  const deliveredPct = isLinkOrder ? Math.round((linksDelivered / linkTotal) * 100) : order.progress;
 
   return (
     <DashboardShell>
@@ -143,25 +148,42 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         <div className="mt-6 border-t border-line pt-5">
           <div className="flex items-center justify-between gap-3 text-sm">
             <span className={`rounded-full px-3 py-1 font-black ${statusTone[order.status]}`}>{order.status}</span>
-            <span className="font-mono text-xs font-bold text-muted">{order.progress}%</span>
+            <span className="font-mono text-xs font-bold text-muted">
+              {isLinkOrder ? `${linksDelivered} / ${linkTotal} links delivered` : `${order.progress}%`}
+            </span>
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-paper-2">
             <div
               className="h-full rounded-full bg-gradient-to-r from-violet via-coral to-mint"
-              style={{ width: `${order.progress}%` }}
+              style={{ width: `${deliveredPct}%` }}
             />
           </div>
 
-          <ul className="mt-5 grid gap-2 sm:grid-cols-2">
-            {order.deliverables.map((deliverable) => (
-              <li key={deliverable} className="flex gap-2 text-sm text-muted">
-                <span className="mt-2 size-1.5 shrink-0 rounded-full bg-coral" />
-                <span>{deliverable}</span>
-              </li>
-            ))}
-          </ul>
+          {!isLinkOrder ? (
+            <ul className="mt-5 grid gap-2 sm:grid-cols-2">
+              {order.deliverables.map((deliverable) => (
+                <li key={deliverable} className="flex gap-2 text-sm text-muted">
+                  <span className="mt-2 size-1.5 shrink-0 rounded-full bg-coral" />
+                  <span>{deliverable}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       </section>
+
+      {isLinkOrder ? (
+        <section className="mt-6">
+          <h2 className="font-display text-2xl font-black tracking-tight">Your links</h2>
+          <p className="mt-1 text-sm text-muted">
+            Set the anchor text and landing page for each placement. We fill in the prospect site, delivered DR,
+            traffic, and the live link as your order is fulfilled.
+          </p>
+          <div className="mt-4">
+            <OrderLinksTable orderId={order.id} links={links} variant="client" />
+          </div>
+        </section>
+      ) : null}
 
       <section className="mt-6 rounded-3xl border border-line bg-card p-6 shadow-card lg:p-8">
         <div className="flex items-center gap-2">

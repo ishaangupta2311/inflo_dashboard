@@ -5,19 +5,27 @@ import Link from "next/link";
 import { Bell } from "lucide-react";
 import type { NotificationItem } from "@/lib/order-backend";
 
-const STORAGE_KEY = "inflo.notifications.lastSeen.v1";
+const DEFAULT_STORAGE_KEY = "inflo.notifications.lastSeen.v1";
 
-export function NotificationsBell({ updates }: { updates: NotificationItem[] }) {
+export function NotificationsBell({
+  updates,
+  basePath = "/orders",
+  storageKey = DEFAULT_STORAGE_KEY
+}: {
+  updates: NotificationItem[];
+  basePath?: string;
+  storageKey?: string;
+}) {
   const [open, setOpen] = useState(false);
   const [lastSeen, setLastSeen] = useState(0);
   const [mounted, setMounted] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(storageKey);
     setLastSeen(raw ? Number(raw) || 0 : 0);
     setMounted(true);
-  }, []);
+  }, [storageKey]);
 
   useEffect(() => {
     if (!open) {
@@ -41,7 +49,7 @@ export function NotificationsBell({ updates }: { updates: NotificationItem[] }) 
       const newest = Math.max(...updates.map((u) => Date.parse(u.createdAtISO)));
       setLastSeen(newest);
       try {
-        window.localStorage.setItem(STORAGE_KEY, String(newest));
+        window.localStorage.setItem(storageKey, String(newest));
       } catch {
         // ignore write failures (private mode / quota)
       }
@@ -74,7 +82,7 @@ export function NotificationsBell({ updates }: { updates: NotificationItem[] }) 
               updates.map((u) => (
                 <Link
                   key={u.id}
-                  href={`/orders/${u.orderId}`}
+                  href={`${basePath}/${u.orderId}`}
                   onClick={() => setOpen(false)}
                   className="block border-b border-line px-4 py-3 transition last:border-b-0 hover:bg-paper"
                 >

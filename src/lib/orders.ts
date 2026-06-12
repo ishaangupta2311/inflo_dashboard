@@ -17,6 +17,8 @@ export type Order = {
   dueAt: string;
   amount: number;
   progress: number;
+  linkTotal?: number;
+  linksDelivered?: number;
   targetUrl: string;
   deliverables: string[];
   owner: string;

@@ -13,6 +13,10 @@ const statusTone: Record<Order["status"], string> = {
 export function OrderCard({ order }: { order: Order }) {
   const Icon = categoryIcons[order.category];
   const invoiceId = order.status === "Completed" ? order.invoiceId : undefined;
+  const linkTotal = order.linkTotal ?? 0;
+  const linksDelivered = order.linksDelivered ?? 0;
+  const isLinkOrder = linkTotal > 0;
+  const barPct = isLinkOrder ? Math.round((linksDelivered / linkTotal) * 100) : order.progress;
 
   return (
     <article className="rounded-2xl border border-line bg-card p-5 shadow-card transition hover:-translate-y-0.5 hover:border-ink">
@@ -50,10 +54,12 @@ export function OrderCard({ order }: { order: Order }) {
               <span className={`rounded-full px-3 py-1 font-black ${statusTone[order.status]}`}>
                 {order.status}
               </span>
-              <span className="font-mono text-xs font-bold text-muted">{order.progress}%</span>
+              <span className="font-mono text-xs font-bold text-muted">
+                {isLinkOrder ? `${linksDelivered} / ${linkTotal} links` : `${order.progress}%`}
+              </span>
             </div>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-paper-2">
-              <div className="h-full rounded-full bg-gradient-to-r from-violet via-coral to-mint" style={{ width: `${order.progress}%` }} />
+              <div className="h-full rounded-full bg-gradient-to-r from-violet via-coral to-mint" style={{ width: `${barPct}%` }} />
             </div>
           </div>
         </div>

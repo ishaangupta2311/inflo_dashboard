@@ -6,10 +6,13 @@ import {
   acceptQuote,
   createOrdersFromCart,
   createQuoteRequest,
-  type CartLine
+  updateOrderLinksClient,
+  type CartLine,
+  type ClientLinkEdit
 } from "@/lib/order-backend";
 
 export type CheckoutResult = { ok: true; count: number } | { ok: false; error: string };
+export type SaveLinksResult = { ok: true } | { ok: false; error: string };
 
 export async function checkoutAction(input: {
   lines: CartLine[];
@@ -34,6 +37,20 @@ export async function createQuoteRequestAction(formData: FormData) {
 
   revalidatePath("/orders");
   redirect(`/orders?created=${encodeURIComponent(order.id)}`);
+}
+
+export async function updateOrderLinksClientAction(input: {
+  orderId: string;
+  links: ClientLinkEdit[];
+}): Promise<SaveLinksResult> {
+  try {
+    await updateOrderLinksClient(input);
+    revalidatePath(`/orders/${input.orderId}`);
+    revalidatePath("/orders");
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Couldn't save changes." };
+  }
 }
 
 export async function acceptQuoteAction(formData: FormData) {

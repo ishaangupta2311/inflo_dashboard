@@ -5,13 +5,15 @@ import { CartButton } from "@/components/cart-button";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { isStaff } from "@/lib/auth";
-import { listRecentUpdatesForUser } from "@/lib/order-backend";
+import { listRecentUpdatesForStaff, listRecentUpdatesForUser } from "@/lib/order-backend";
 
 export async function DashboardShell({ children }: { children: React.ReactNode }) {
   const staff = await isStaff();
-  // Staff manage other people's orders — they have no personal order feed, so
-  // skip the notifications query entirely for them.
-  const updates = staff ? [] : await listRecentUpdatesForUser().catch(() => []);
+  // Clients are notified of staff changes to their orders; staff are notified of
+  // client changes across all orders.
+  const updates = staff
+    ? await listRecentUpdatesForStaff().catch(() => [])
+    : await listRecentUpdatesForUser().catch(() => []);
 
   return (
     <div className="min-h-screen bg-paper text-ink">
@@ -51,9 +53,13 @@ export async function DashboardShell({ children }: { children: React.ReactNode }
             </div>
 
             <div className="flex items-center gap-2">
+              <NotificationsBell
+                updates={updates}
+                basePath={staff ? "/admin/orders" : "/orders"}
+                storageKey={staff ? "inflo.notifications.staff.lastSeen.v1" : "inflo.notifications.lastSeen.v1"}
+              />
               {!staff ? (
                 <>
-                  <NotificationsBell updates={updates} />
                   <CartButton />
                   <Link
                     href="/store"

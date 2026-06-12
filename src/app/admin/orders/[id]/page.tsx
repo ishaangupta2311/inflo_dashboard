@@ -1,25 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink, MessageSquarePlus, Save } from "lucide-react";
-import { postUpdateAction, updateOrderAction } from "@/app/admin/actions";
+import { ArrowLeft, ExternalLink, MessageSquarePlus } from "lucide-react";
+import { postUpdateAction } from "@/app/admin/actions";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { ManageOrderForm } from "@/components/manage-order-form";
+import { OrderLinksTable } from "@/components/order-links-table";
 import { getAdminOrder } from "@/lib/order-backend";
-import { money, type OrderStatus } from "@/lib/orders";
-
-const STATUSES: OrderStatus[] = [
-  "Brief received",
-  "In outreach",
-  "Content review",
-  "Publishing",
-  "Completed"
-];
-
-const QUOTE_STATES = [
-  { value: "", label: "—" },
-  { value: "requested", label: "Requested" },
-  { value: "quoted", label: "Quoted" },
-  { value: "accepted", label: "Accepted" }
-];
+import { money } from "@/lib/orders";
 
 export default async function AdminOrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -29,7 +16,10 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
     notFound();
   }
 
-  const { order, updates } = detail;
+  const { order, updates, links } = detail;
+  const linkTotal = order.linkTotal ?? 0;
+  const linksDelivered = order.linksDelivered ?? 0;
+  const isLinkOrder = linkTotal > 0;
 
   return (
     <DashboardShell>
@@ -86,6 +76,25 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
         ) : null}
       </section>
 
+      {isLinkOrder ? (
+        <section className="mt-6 rounded-2xl border border-line bg-card p-6 shadow-card">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="font-display text-xl font-black tracking-tight">Links</h2>
+              <p className="mt-1 text-sm text-muted">
+                Fill the prospect URL, delivered DR, traffic, and publish link for each placement.
+              </p>
+            </div>
+            <span className="rounded-full bg-paper px-3 py-1 text-sm font-black">
+              {linksDelivered} / {linkTotal} delivered
+            </span>
+          </div>
+          <div className="mt-4">
+            <OrderLinksTable orderId={order.id} links={links} variant="admin" />
+          </div>
+        </section>
+      ) : null}
+
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <section className="rounded-2xl border border-line bg-card p-6 shadow-card">
           <h2 className="font-display text-xl font-black tracking-tight">Manage order</h2>
@@ -93,78 +102,15 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
             Changing the status posts it to the client&apos;s timeline. Completing an order generates its invoice.
           </p>
 
-          <form action={updateOrderAction} className="mt-5 grid gap-4">
-            <input type="hidden" name="orderId" value={order.id} />
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block">
-                <span className="mb-2 block text-sm font-black">Status</span>
-                <select
-                  name="status"
-                  defaultValue={order.status}
-                  className="w-full rounded-xl border border-line bg-paper px-4 py-3 outline-none transition focus:border-violet focus:ring-4 focus:ring-violet/15"
-                >
-                  {STATUSES.map((status) => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-sm font-black">Progress (%)</span>
-                <input
-                  name="progress"
-                  type="number"
-                  min={0}
-                  max={100}
-                  defaultValue={order.progress}
-                  className="w-full rounded-xl border border-line bg-paper px-4 py-3 outline-none transition focus:border-violet focus:ring-4 focus:ring-violet/15"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-sm font-black">Amount (USD)</span>
-                <input
-                  name="amount"
-                  type="number"
-                  min={0}
-                  defaultValue={order.amount}
-                  className="w-full rounded-xl border border-line bg-paper px-4 py-3 outline-none transition focus:border-violet focus:ring-4 focus:ring-violet/15"
-                />
-              </label>
-
-              <label className="block">
-                <span className="mb-2 block text-sm font-black">Quote state</span>
-                <select
-                  name="quoteStatus"
-                  defaultValue={order.quoteStatus ?? ""}
-                  className="w-full rounded-xl border border-line bg-paper px-4 py-3 outline-none transition focus:border-violet focus:ring-4 focus:ring-violet/15"
-                >
-                  {QUOTE_STATES.map((state) => (
-                    <option key={state.value} value={state.value}>
-                      {state.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            <label className="block">
-              <span className="mb-2 block text-sm font-black">Note for the client <span className="font-normal text-muted">(optional)</span></span>
-              <textarea
-                name="note"
-                className="min-h-24 w-full rounded-xl border border-line bg-paper px-4 py-3 outline-none transition focus:border-violet focus:ring-4 focus:ring-violet/15"
-                placeholder="Added to the timeline alongside the status change."
-              />
-            </label>
-
-            <button className="inline-flex items-center justify-center gap-2 rounded-full bg-ink px-5 py-3 text-sm font-black text-paper transition hover:-translate-y-0.5 hover:bg-violet">
-              <Save className="size-4" />
-              Save changes
-            </button>
-          </form>
+          <ManageOrderForm
+            orderId={order.id}
+            status={order.status}
+            progress={order.progress}
+            amount={order.amount}
+            quoteStatus={order.quoteStatus}
+            linkTotal={linkTotal}
+            linksDelivered={linksDelivered}
+          />
         </section>
 
         <section className="rounded-2xl border border-line bg-card p-6 shadow-card">

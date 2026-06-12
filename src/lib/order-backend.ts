@@ -3,9 +3,13 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/auth";
-import { catalogBySlug, findBuyable } from "@/lib/catalog";
+import { catalogBySlug, findBuyable, type Buyable } from "@/lib/catalog";
 import { serviceOptions, type Order, type OrderStatus } from "@/lib/orders";
-import type { Order as OrderRow, OrderUpdate as OrderUpdateRow } from "@/generated/prisma/client";
+import type {
+  Order as OrderRow,
+  OrderLink as OrderLinkRow,
+  OrderUpdate as OrderUpdateRow
+} from "@/generated/prisma/client";
 
 export type CreateOrderInput = {
   category: Order["category"];
@@ -43,6 +47,8 @@ function toOrder(row: OrderRow): Order {
     dueAt: formatDate(row.dueAt),
     amount: row.amount,
     progress: row.progress,
+    linkTotal: row.linkTotal,
+    linksDelivered: row.linksDelivered,
     targetUrl: row.targetUrl,
     deliverables: row.deliverables,
     owner: row.owner,
@@ -247,6 +253,14 @@ export async function createOrder(input: CreateOrderInput) {
 export type CartLine = { id: string; quantity: number };
 export type CheckoutInput = { lines: CartLine[]; targetUrl: string; brief?: string };
 
+type ResolvedLine = { buyable: Buyable; quantity: number };
+
+function summariseLines(lines: ResolvedLine[]): string {
+  return lines
+    .map(({ buyable, quantity }) => (quantity > 1 ? `${buyable.name} ×${quantity}` : buyable.name))
+    .join(", ");
+}
+
 export async function createOrdersFromCart(input: CheckoutInput) {
   noStore();
   const userId = await requireUserId();
@@ -257,47 +271,92 @@ export async function createOrdersFromCart(input: CheckoutInput) {
     throw new Error("Target URL is required.");
   }
 
-  const resolved = input.lines
-    .map((line) => ({ line, buyable: findBuyable(line.id) }))
-    .filter(
-      (entry): entry is { line: CartLine; buyable: NonNullable<ReturnType<typeof findBuyable>> } =>
-        Boolean(entry.buyable)
-    );
+  const resolved: ResolvedLine[] = input.lines
+    .map((line) => ({ buyable: findBuyable(line.id), quantity: Math.max(1, Math.min(99, Math.round(line.quantity || 1))) }))
+    .filter((entry): entry is ResolvedLine => Boolean(entry.buyable));
 
   if (resolved.length === 0) {
     throw new Error("Your cart is empty.");
   }
 
+  // One order per catalog service — all lines of the same service consolidate together.
+  const groups = new Map<string, ResolvedLine[]>();
+  for (const entry of resolved) {
+    const key = entry.buyable.service.slug;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.push(entry);
+    } else {
+      groups.set(key, [entry]);
+    }
+  }
+
   const now = new Date();
+  const briefNote = input.brief?.trim() ? `Client note: ${input.brief.trim().slice(0, 120)}` : undefined;
 
   const created = await prisma.$transaction(
-    resolved.map(({ line, buyable }) => {
-      const quantity = Math.max(1, Math.min(99, Math.round(line.quantity || 1)));
+    [...groups.values()].map((lines) => {
+      const service = lines[0].buyable.service;
+      const amount = lines.reduce((sum, { buyable, quantity }) => sum + buyable.price * quantity, 0);
+      const billing = lines.some(({ buyable }) => buyable.billing === "monthly") ? "monthly" : "one_time";
+      const packageId = lines.length === 1 ? lines[0].buyable.id : null;
       const dueAt = new Date(now);
-      dueAt.setDate(now.getDate() + leadDaysForCategory(buyable.service.category));
-      const label = quantity > 1 ? `${buyable.name} ×${quantity}` : buyable.name;
+      dueAt.setDate(now.getDate() + leadDaysForCategory(service.category));
 
+      // Link Building: expand every unit into an individual link row.
+      if (service.category === "Link Building") {
+        const linkRows = lines
+          .flatMap(({ buyable, quantity }) =>
+            Array.from({ length: quantity * buyable.links }, () => buyable.dr)
+          )
+          .map((orderedDr, index) => ({ position: index + 1, orderedDr }));
+
+        return prisma.order.create({
+          data: {
+            userId,
+            userEmail: email,
+            service: `${service.name} — ${linkRows.length} ${linkRows.length === 1 ? "placement" : "placements"}`,
+            category: service.category,
+            packageId,
+            packageName: summariseLines(lines),
+            billing,
+            status: "Brief received",
+            orderedAt: now,
+            dueAt,
+            amount,
+            progress: 0,
+            linkTotal: linkRows.length,
+            linksDelivered: 0,
+            targetUrl,
+            deliverables: briefNote ? [briefNote] : [],
+            owner: "Client Success",
+            links: { create: linkRows }
+          }
+        });
+      }
+
+      // Everything else: a single consolidated, deliverables-style order.
       return prisma.order.create({
         data: {
           userId,
           userEmail: email,
-          service: `${buyable.service.name} — ${label}`,
-          category: buyable.service.category,
-          packageId: buyable.id,
-          packageName: buyable.name,
-          billing: buyable.billing,
+          service: `${service.name} — ${summariseLines(lines)}`,
+          category: service.category,
+          packageId,
+          packageName: summariseLines(lines),
+          billing,
           status: "Brief received",
           orderedAt: now,
           dueAt,
-          amount: buyable.price * quantity,
+          amount,
           progress: 12,
           targetUrl,
           deliverables: [
-            `${buyable.name} — ${buyable.description}`,
-            ...(quantity > 1 ? [`Quantity: ${quantity}`] : []),
-            input.brief?.trim()
-              ? `Client note: ${input.brief.trim().slice(0, 120)}`
-              : "Brief received by fulfilment team"
+            ...lines.map(
+              ({ buyable, quantity }) =>
+                `${buyable.name}${quantity > 1 ? ` ×${quantity}` : ""} — ${buyable.description}`
+            ),
+            briefNote ?? "Brief received by fulfilment team"
           ],
           owner: "Client Success"
         }
@@ -367,21 +426,37 @@ export type OrderUpdateEntry = {
   createdAt: string;
 };
 
-export type OrderDetail = { order: Order; updates: OrderUpdateEntry[] };
+export type OrderLinkEntry = {
+  id: string;
+  position: number;
+  orderedDr: string;
+  anchorText: string;
+  landingPage: string;
+  prospectUrl: string;
+  deliveredDr: string;
+  traffic: string;
+  publishUrl: string;
+  delivered: boolean;
+};
+
+export type OrderDetail = { order: Order; updates: OrderUpdateEntry[]; links: OrderLinkEntry[] };
 
 export async function getOrderDetail(id: string): Promise<OrderDetail | undefined> {
   noStore();
   const userId = await requireUserId();
   const row = await prisma.order.findFirst({
     where: { id, userId },
-    include: { updates: { orderBy: { createdAt: "desc" } } }
+    include: {
+      updates: { orderBy: { createdAt: "desc" } },
+      links: { orderBy: { position: "asc" } }
+    }
   });
 
   if (!row) {
     return undefined;
   }
 
-  return { order: toOrder(row), updates: row.updates.map(toUpdateEntry) };
+  return { order: toOrder(row), updates: row.updates.map(toUpdateEntry), links: row.links.map(toOrderLink) };
 }
 
 export async function acceptQuote(orderId: string): Promise<Order> {
@@ -432,8 +507,10 @@ export type NotificationItem = {
 export async function listRecentUpdatesForUser(limit = 12): Promise<NotificationItem[]> {
   noStore();
   const userId = await requireUserId();
+  // Only surface updates made by staff — the client doesn't need to be notified
+  // of their own edits.
   const rows = await prisma.orderUpdate.findMany({
-    where: { order: { userId } },
+    where: { order: { userId }, authorId: { not: userId } },
     orderBy: { createdAt: "desc" },
     take: limit,
     include: { order: { select: { id: true, service: true } } }
@@ -450,6 +527,32 @@ export async function listRecentUpdatesForUser(limit = 12): Promise<Notification
   }));
 }
 
+// Staff notifications feed: recent updates authored by clients (the order owner),
+// across every order — i.e. "a client changed something." An update is
+// client-authored when its author is the order's owner.
+export async function listRecentUpdatesForStaff(limit = 12): Promise<NotificationItem[]> {
+  noStore();
+  await requireStaff();
+  const rows = await prisma.orderUpdate.findMany({
+    orderBy: { createdAt: "desc" },
+    take: 60,
+    include: { order: { select: { id: true, service: true, userId: true } } }
+  });
+
+  return rows
+    .filter((row) => row.authorId === row.order.userId)
+    .slice(0, limit)
+    .map((row) => ({
+      id: row.id,
+      orderId: row.orderId,
+      service: row.order.service,
+      body: row.body,
+      status: row.status ?? undefined,
+      createdAtISO: row.createdAt.toISOString(),
+      createdAtLabel: formatDateTime(row.createdAt)
+    }));
+}
+
 // ---------------------------------------------------------------------------
 // Admin — full visibility + status / progress / update mutations.
 // ---------------------------------------------------------------------------
@@ -463,7 +566,7 @@ export type AdminOrder = Order & {
   createdAtLabel: string;
 };
 
-export type AdminOrderDetail = { order: AdminOrder; updates: OrderUpdateEntry[] };
+export type AdminOrderDetail = { order: AdminOrder; updates: OrderUpdateEntry[]; links: OrderLinkEntry[] };
 
 export type OrderMutationInput = {
   status?: OrderStatus;
@@ -485,14 +588,17 @@ export async function getAdminOrder(id: string): Promise<AdminOrderDetail | unde
   await requireStaff();
   const row = await prisma.order.findUnique({
     where: { id },
-    include: { updates: { orderBy: { createdAt: "desc" } } }
+    include: {
+      updates: { orderBy: { createdAt: "desc" } },
+      links: { orderBy: { position: "asc" } }
+    }
   });
 
   if (!row) {
     return undefined;
   }
 
-  return { order: toAdminOrder(row), updates: row.updates.map(toUpdateEntry) };
+  return { order: toAdminOrder(row), updates: row.updates.map(toUpdateEntry), links: row.links.map(toOrderLink) };
 }
 
 export async function updateOrder(orderId: string, input: OrderMutationInput): Promise<AdminOrder> {
@@ -507,6 +613,12 @@ export async function updateOrder(orderId: string, input: OrderMutationInput): P
   }
 
   const completing = input.status === "Completed";
+
+  if (completing && existing.linkTotal > 0 && existing.linksDelivered < existing.linkTotal) {
+    throw new Error(
+      `Can't complete yet — ${existing.linksDelivered} of ${existing.linkTotal} links delivered. Add a publish link to every row first.`
+    );
+  }
 
   const updated = await prisma.order.update({
     where: { id: orderId },
@@ -573,6 +685,217 @@ export async function addOrderUpdate(orderId: string, body: string): Promise<Ord
   return toUpdateEntry(row);
 }
 
+// ---------------------------------------------------------------------------
+// Per-link editing — clients own anchor text + landing page; staff own the
+// prospect / delivered DR / traffic / publish columns. Every write is scoped to
+// { id, orderId } so a link id from another order can never be touched.
+// ---------------------------------------------------------------------------
+
+export type ClientLinkEdit = { id: string; anchorText: string; landingPage: string };
+export type AdminLinkEdit = {
+  id: string;
+  anchorText: string;
+  landingPage: string;
+  prospectUrl: string;
+  deliveredDr: string;
+  traffic: string;
+  publishUrl: string;
+};
+
+// Status order, used to advance a link order forward without ever moving it back.
+const STATUS_FLOW: OrderStatus[] = [
+  "Brief received",
+  "In outreach",
+  "Content review",
+  "Publishing",
+  "Completed"
+];
+
+// Derive a link order's status purely from what staff have filled in:
+// nothing yet → Brief received; prospect sites added → In outreach;
+// first link published → Publishing; every link published → Completed.
+function deriveLinkStatus(rows: { publishUrl: string; prospectUrl: string }[]): OrderStatus {
+  const total = rows.length;
+  const delivered = rows.filter((r) => r.publishUrl.trim() !== "").length;
+  const started = rows.filter((r) => r.prospectUrl.trim() !== "").length;
+
+  if (total > 0 && delivered === total) return "Completed";
+  if (delivered > 0) return "Publishing";
+  if (started > 0) return "In outreach";
+  return "Brief received";
+}
+
+// Recompute delivered counts/progress and auto-advance the status (forward only).
+// Admins can still override the status manually via the Manage order form.
+async function applyLinkProgress(
+  orderId: string,
+  adminId: string,
+  admin: Awaited<ReturnType<typeof currentUser>>
+): Promise<void> {
+  const rows = await prisma.orderLink.findMany({
+    where: { orderId },
+    select: { publishUrl: true, prospectUrl: true }
+  });
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+
+  if (!order) {
+    return;
+  }
+
+  const total = rows.length;
+  const delivered = rows.filter((r) => r.publishUrl.trim() !== "").length;
+
+  const derived = deriveLinkStatus(rows);
+  const advancing = STATUS_FLOW.indexOf(derived) > STATUS_FLOW.indexOf(order.status as OrderStatus);
+  const nextStatus = advancing ? derived : (order.status as OrderStatus);
+  const completing = advancing && nextStatus === "Completed";
+
+  await prisma.order.update({
+    where: { id: orderId },
+    data: {
+      linkTotal: total,
+      linksDelivered: delivered,
+      progress: total ? Math.round((delivered / total) * 100) : 0,
+      ...(advancing ? { status: nextStatus } : {}),
+      ...(completing
+        ? {
+            completedAt: new Date(),
+            progress: 100,
+            ...(order.invoiceId ? {} : { invoiceId: `INV-${order.id}` })
+          }
+        : {})
+    }
+  });
+
+  if (advancing) {
+    await prisma.orderUpdate.create({
+      data: {
+        orderId,
+        authorId: adminId,
+        authorName: adminName(admin),
+        body: `Status moved to “${nextStatus}”.`,
+        status: nextStatus
+      }
+    });
+  }
+}
+
+export async function updateOrderLinksClient(input: {
+  orderId: string;
+  links: ClientLinkEdit[];
+}): Promise<void> {
+  noStore();
+  const userId = await requireUserId();
+  const user = await currentUser();
+  const order = await prisma.order.findFirst({ where: { id: input.orderId, userId } });
+
+  if (!order) {
+    throw new Error("Order not found.");
+  }
+
+  const before = await prisma.orderLink.findMany({
+    where: { id: { in: input.links.map((l) => l.id) }, orderId: input.orderId },
+    select: { id: true, anchorText: true, landingPage: true }
+  });
+  const prior = new Map(before.map((l) => [l.id, l]));
+  const changed = input.links.some((link) => {
+    const was = prior.get(link.id);
+    return was && (was.anchorText !== link.anchorText.trim() || was.landingPage !== link.landingPage.trim());
+  });
+
+  await prisma.$transaction(
+    input.links.map((link) =>
+      prisma.orderLink.updateMany({
+        where: { id: link.id, orderId: input.orderId },
+        data: { anchorText: link.anchorText.trim(), landingPage: link.landingPage.trim() }
+      })
+    )
+  );
+
+  // Notify staff that the client changed their link brief.
+  if (changed) {
+    await prisma.orderUpdate.create({
+      data: {
+        orderId: input.orderId,
+        authorId: userId,
+        authorName: clientDisplayName(user),
+        body: "Updated anchor text and landing pages."
+      }
+    });
+  }
+}
+
+export async function updateOrderLinksAdmin(input: {
+  orderId: string;
+  links: AdminLinkEdit[];
+}): Promise<void> {
+  noStore();
+  const { userId: adminId } = await requireStaff();
+  const admin = await currentUser();
+  const order = await prisma.order.findUnique({ where: { id: input.orderId } });
+
+  if (!order) {
+    throw new Error("Order not found.");
+  }
+
+  const before = await prisma.orderLink.findMany({
+    where: { id: { in: input.links.map((l) => l.id) }, orderId: input.orderId },
+    select: {
+      id: true,
+      anchorText: true,
+      landingPage: true,
+      prospectUrl: true,
+      deliveredDr: true,
+      traffic: true,
+      publishUrl: true
+    }
+  });
+  const prior = new Map(before.map((l) => [l.id, l]));
+  const changed = input.links.some((link) => {
+    const was = prior.get(link.id);
+    return (
+      was &&
+      (was.anchorText !== link.anchorText.trim() ||
+        was.landingPage !== link.landingPage.trim() ||
+        was.prospectUrl !== link.prospectUrl.trim() ||
+        was.deliveredDr !== link.deliveredDr.trim() ||
+        was.traffic !== link.traffic.trim() ||
+        was.publishUrl !== link.publishUrl.trim())
+    );
+  });
+
+  await prisma.$transaction(
+    input.links.map((link) =>
+      prisma.orderLink.updateMany({
+        where: { id: link.id, orderId: input.orderId },
+        data: {
+          anchorText: link.anchorText.trim(),
+          landingPage: link.landingPage.trim(),
+          prospectUrl: link.prospectUrl.trim(),
+          deliveredDr: link.deliveredDr.trim(),
+          traffic: link.traffic.trim(),
+          publishUrl: link.publishUrl.trim()
+        }
+      })
+    )
+  );
+
+  // Notify the client that we updated their link details.
+  if (changed) {
+    await prisma.orderUpdate.create({
+      data: {
+        orderId: input.orderId,
+        authorId: adminId,
+        authorName: adminName(admin),
+        body: "Updated your link details."
+      }
+    });
+  }
+
+  // Recompute delivered counts and auto-advance status (posts its own note on change).
+  await applyLinkProgress(input.orderId, adminId, admin);
+}
+
 function toAdminOrder(row: OrderRow): AdminOrder {
   return {
     ...toOrder(row),
@@ -595,6 +918,21 @@ function toUpdateEntry(row: OrderUpdateRow): OrderUpdateEntry {
   };
 }
 
+function toOrderLink(row: OrderLinkRow): OrderLinkEntry {
+  return {
+    id: row.id,
+    position: row.position,
+    orderedDr: row.orderedDr,
+    anchorText: row.anchorText,
+    landingPage: row.landingPage,
+    prospectUrl: row.prospectUrl,
+    deliveredDr: row.deliveredDr,
+    traffic: row.traffic,
+    publishUrl: row.publishUrl,
+    delivered: row.publishUrl.trim() !== ""
+  };
+}
+
 async function currentUserEmail(): Promise<string | undefined> {
   const user = await currentUser();
   return (
@@ -610,6 +948,14 @@ function adminName(user: Awaited<ReturnType<typeof currentUser>>): string {
   }
   const name = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
   return name || user.primaryEmailAddress?.emailAddress || "Influencer Outreach";
+}
+
+function clientDisplayName(user: Awaited<ReturnType<typeof currentUser>>): string {
+  if (!user) {
+    return "Client";
+  }
+  const name = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
+  return name || user.primaryEmailAddress?.emailAddress || "Client";
 }
 
 function leadDaysForCategory(category: Order["category"]): number {

@@ -26,6 +26,8 @@ model Order {
   completedAt  DateTime?
   amount       Int
   progress     Int      @default(12)
+  linkTotal      Int    @default(0) // total links ordered (Link Building); 0 for non-link orders
+  linksDelivered Int    @default(0) // links with a publish URL — denormalized for cheap listing
   targetUrl    String
   deliverables String[]
   owner        String   @default("Client Success")
@@ -34,9 +36,31 @@ model Order {
   updatedAt    DateTime @updatedAt
 
   updates      OrderUpdate[]
+  links        OrderLink[]
 
   @@index([userId])
   @@map("orders")
+}
+
+// One row per individual link in a Link Building order. Clients edit anchor text
+// and landing page; staff fill the prospect/delivered DR/traffic/publish columns.
+model OrderLink {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  position    Int      // Sno. (1-based)
+  orderedDr   String   // DR tier ordered, e.g. "DR 30+" (read-only to client)
+  anchorText  String   @default("") // client-editable
+  landingPage String   @default("") // client-editable
+  prospectUrl String   @default("") // admin-only
+  deliveredDr String   @default("") // admin-only (DR we deliver)
+  traffic     String   @default("") // admin-only
+  publishUrl  String   @default("") // admin-only; non-empty ⇒ delivered
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([orderId])
+  @@map("order_links")
 }
 
 model OrderUpdate {

@@ -12,6 +12,8 @@ export type CatalogPackage = {
   tagline: string;
   highlight?: string;
   features: string[];
+  links?: number; // number of links/placements this package delivers (Link Building)
+  dr?: string; // DR tier of those links, e.g. "DR 50+"
 };
 
 export type CatalogAddOn = {
@@ -19,6 +21,7 @@ export type CatalogAddOn = {
   name: string;
   price: number;
   unit: string;
+  dr: string; // DR tier of the placement, e.g. "DR 30+"
 };
 
 export type CatalogService = {
@@ -52,10 +55,10 @@ export const catalog: CatalogService[] = [
       "Average 14-day turnaround"
     ],
     addOns: [
-      { id: "lb-dr30", name: "Single guest post — DR 30+", price: 120, unit: "per placement" },
-      { id: "lb-dr40", name: "Single guest post — DR 40+", price: 160, unit: "per placement" },
-      { id: "lb-dr50", name: "Single guest post — DR 50+", price: 250, unit: "per placement" },
-      { id: "lb-dr60", name: "Single guest post — DR 60+", price: 300, unit: "per placement" }
+      { id: "lb-dr30", name: "Single guest post — DR 30+", price: 120, unit: "per placement", dr: "DR 30+" },
+      { id: "lb-dr40", name: "Single guest post — DR 40+", price: 160, unit: "per placement", dr: "DR 40+" },
+      { id: "lb-dr50", name: "Single guest post — DR 50+", price: 250, unit: "per placement", dr: "DR 50+" },
+      { id: "lb-dr60", name: "Single guest post — DR 60+", price: 300, unit: "per placement", dr: "DR 60+" }
     ],
     packages: [
       {
@@ -64,6 +67,8 @@ export const catalog: CatalogService[] = [
         price: 600,
         billing: "one_time",
         tagline: "3 links, DR 50+",
+        links: 3,
+        dr: "DR 50+",
         features: [
           "3 guest posts on DR 50+ sites",
           "Niche-relevant matching",
@@ -78,6 +83,8 @@ export const catalog: CatalogService[] = [
         billing: "one_time",
         tagline: "8 links, DR 50+",
         highlight: "Best value",
+        links: 8,
+        dr: "DR 50+",
         features: [
           "8 guest posts on DR 50+ sites",
           "Anchor & target strategy review",
@@ -91,6 +98,8 @@ export const catalog: CatalogService[] = [
         price: 2500,
         billing: "one_time",
         tagline: "15 links, DR 40–50+",
+        links: 15,
+        dr: "DR 40–50+",
         features: [
           "15 guest posts on DR 40–50+ sites",
           "Custom anchor distribution plan",
@@ -255,6 +264,8 @@ export type Buyable = {
   price: number;
   billing: BillingInterval;
   description: string;
+  links: number; // links/placements per unit — 1 for an add-on, the package's count otherwise
+  dr: string; // DR tier label, e.g. "DR 30+" (empty for services without a DR tier)
 };
 
 /** Resolves any cart line id (package or à-la-carte add-on) to a uniform buyable. */
@@ -269,7 +280,9 @@ export function findBuyable(id: string): Buyable | undefined {
         name: pkg.name,
         price: pkg.price,
         billing: pkg.billing,
-        description: pkg.tagline
+        description: pkg.tagline,
+        links: pkg.links ?? 1,
+        dr: pkg.dr ?? ""
       };
     }
 
@@ -282,7 +295,9 @@ export function findBuyable(id: string): Buyable | undefined {
         name: addOn.name,
         price: addOn.price,
         billing: "one_time",
-        description: addOn.unit
+        description: addOn.unit,
+        links: 1,
+        dr: addOn.dr
       };
     }
   }
