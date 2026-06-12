@@ -109,7 +109,8 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
             <div>
               <h2 className="font-display text-xl font-black tracking-tight">Media features</h2>
               <p className="mt-1 text-sm text-muted">
-                Fill the title, PR doclink, publish date, and coverage excel link for each feature.
+                Fill the publish date and coverage excel link as each feature is published. You can also edit the
+                client&apos;s title and PR doc.
               </p>
             </div>
             <span className="rounded-full bg-paper px-3 py-1 text-sm font-black">

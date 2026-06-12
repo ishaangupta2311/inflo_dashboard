@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Check, ExternalLink, Save } from "lucide-react";
+import { updateOrderPrItemsClientAction } from "@/app/actions";
 import { updateOrderPrItemsAdminAction } from "@/app/admin/actions";
 import type { OrderPrItemEntry } from "@/lib/order-backend";
 
@@ -72,16 +73,21 @@ export function OrderPrTable({
   const save = () => {
     setError(null);
     startTransition(async () => {
-      const result = await updateOrderPrItemsAdminAction({
-        orderId,
-        items: rows.map((r) => ({
-          id: r.id,
-          title: r.title,
-          docUrl: r.docUrl,
-          publishDate: r.publishDate,
-          excelUrl: r.excelUrl
-        }))
-      });
+      const result = isStaffView
+        ? await updateOrderPrItemsAdminAction({
+            orderId,
+            items: rows.map((r) => ({
+              id: r.id,
+              title: r.title,
+              docUrl: r.docUrl,
+              publishDate: r.publishDate,
+              excelUrl: r.excelUrl
+            }))
+          })
+        : await updateOrderPrItemsClientAction({
+            orderId,
+            items: rows.map((r) => ({ id: r.id, title: r.title, docUrl: r.docUrl }))
+          });
 
       if (result.ok) {
         setSaved(true);
@@ -123,34 +129,24 @@ export function OrderPrTable({
                     </span>
                   </td>
 
-                  {/* Title — admin-editable */}
+                  {/* Title — editable by the client and by staff */}
                   <td className={cellClass}>
-                    {isStaffView ? (
-                      <input
-                        value={row.title}
-                        onChange={(e) => update(row.id, { title: e.target.value })}
-                        placeholder="Feature title"
-                        className={inputClass}
-                      />
-                    ) : row.title.trim() ? (
-                      <span className="font-bold text-ink">{row.title}</span>
-                    ) : (
-                      <span className="text-muted">—</span>
-                    )}
+                    <input
+                      value={row.title}
+                      onChange={(e) => update(row.id, { title: e.target.value })}
+                      placeholder="Feature title"
+                      className={inputClass}
+                    />
                   </td>
 
-                  {/* PR doclink — admin-editable; client sees a link */}
+                  {/* PR doclink — editable by the client and by staff */}
                   <td className={cellClass}>
-                    {isStaffView ? (
-                      <input
-                        value={row.docUrl}
-                        onChange={(e) => update(row.id, { docUrl: e.target.value })}
-                        placeholder="https://docs.google.com/…"
-                        className={inputClass}
-                      />
-                    ) : (
-                      <LinkCell value={row.docUrl} label="View doc" />
-                    )}
+                    <input
+                      value={row.docUrl}
+                      onChange={(e) => update(row.id, { docUrl: e.target.value })}
+                      placeholder="https://docs.google.com/…"
+                      className={inputClass}
+                    />
                   </td>
 
                   {/* Publish date — admin-editable; client sees a formatted date */}
@@ -189,23 +185,25 @@ export function OrderPrTable({
         </table>
       </div>
 
-      {isStaffView ? (
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={save}
-            disabled={pending}
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-ink px-5 py-2.5 text-sm font-black text-paper transition hover:-translate-y-0.5 hover:bg-violet disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {saved && !pending ? <Check className="size-4" /> : <Save className="size-4" />}
-            {pending ? "Saving…" : saved ? "Saved" : "Save features"}
-          </button>
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          onClick={save}
+          disabled={pending}
+          className="inline-flex items-center justify-center gap-2 rounded-full bg-ink px-5 py-2.5 text-sm font-black text-paper transition hover:-translate-y-0.5 hover:bg-violet disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {saved && !pending ? <Check className="size-4" /> : <Save className="size-4" />}
+          {pending ? "Saving…" : saved ? "Saved" : isStaffView ? "Save features" : "Save changes"}
+        </button>
+        {isStaffView ? (
           <p className="text-sm text-muted">Setting a publish date marks that feature published.</p>
-          {error ? (
-            <p className="rounded-lg bg-coral-soft px-3 py-1.5 text-sm font-bold text-coral-ink">{error}</p>
-          ) : null}
-        </div>
-      ) : null}
+        ) : (
+          <p className="text-sm text-muted">Set the title and PR doc for each feature.</p>
+        )}
+        {error ? (
+          <p className="rounded-lg bg-coral-soft px-3 py-1.5 text-sm font-bold text-coral-ink">{error}</p>
+        ) : null}
+      </div>
     </div>
   );
 }

@@ -202,7 +202,8 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         <section className="mt-6">
           <h2 className="font-display text-2xl font-black tracking-tight">Your media features</h2>
           <p className="mt-1 text-sm text-muted">
-            Each feature&apos;s title, PR doc, publish date, and coverage report appear here as your campaign lands.
+            Set the title and PR doc for each feature. We fill in the publish date and coverage report as your
+            campaign lands.
           </p>
           <div className="mt-4">
             <OrderPrTable orderId={order.id} items={prItems} variant="client" />
