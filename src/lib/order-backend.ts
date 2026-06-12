@@ -1020,17 +1020,23 @@ const ADMIN_PR_FIELDS = [
   { key: "excelUrl", label: "publish excel link" }
 ] as const;
 
-// Derive a PR order's status from what staff have filled in: nothing → Brief
-// received; a title or doclink drafted → Content review; first feature published
-// → Publishing; every feature published → Completed.
-function derivePrStatus(rows: { publishDate: string; title: string; docUrl: string }[]): OrderStatus {
+export type ClientPrEdit = { id: string; title: string; docUrl: string };
+
+const CLIENT_PR_FIELDS = [
+  { key: "title", label: "title" },
+  { key: "docUrl", label: "PR doclink" }
+] as const;
+
+// Derive a PR order's status from publish dates (the staff fulfilment signal):
+// nothing published → Brief received; first feature published → Publishing;
+// every feature published → Completed. Title/doclink are client inputs, so they
+// don't drive status — admins set intermediate stages manually.
+function derivePrStatus(rows: { publishDate: string }[]): OrderStatus {
   const total = rows.length;
   const published = rows.filter((r) => r.publishDate.trim() !== "").length;
-  const drafted = rows.filter((r) => r.title.trim() !== "" || r.docUrl.trim() !== "").length;
 
   if (total > 0 && published === total) return "Completed";
   if (published > 0) return "Publishing";
-  if (drafted > 0) return "Content review";
   return "Brief received";
 }
 
@@ -1043,7 +1049,7 @@ async function applyPrProgress(
 ): Promise<void> {
   const rows = await prisma.orderPrItem.findMany({
     where: { orderId },
-    select: { publishDate: true, title: true, docUrl: true }
+    select: { publishDate: true }
   });
   const order = await prisma.order.findUnique({ where: { id: orderId } });
 
@@ -1085,6 +1091,43 @@ async function applyPrProgress(
         body: `Status moved to “${nextStatus}”.`,
         status: nextStatus
       }
+    });
+  }
+}
+
+export async function updateOrderPrItemsClient(input: {
+  orderId: string;
+  items: ClientPrEdit[];
+}): Promise<void> {
+  noStore();
+  const userId = await requireUserId();
+  const user = await currentUser();
+  const order = await prisma.order.findFirst({ where: { id: input.orderId, userId } });
+
+  if (!order) {
+    throw new Error("Order not found.");
+  }
+
+  const before = await prisma.orderPrItem.findMany({
+    where: { id: { in: input.items.map((i) => i.id) }, orderId: input.orderId },
+    select: { id: true, position: true, title: true, docUrl: true }
+  });
+  const prior = new Map(before.map((i) => [i.id, i]));
+
+  await prisma.$transaction(
+    input.items.map((item) =>
+      prisma.orderPrItem.updateMany({
+        where: { id: item.id, orderId: input.orderId },
+        data: { title: item.title.trim(), docUrl: item.docUrl.trim() }
+      })
+    )
+  );
+
+  // Notify staff exactly what the client changed.
+  const summary = summariseRowEdits(input.items, prior, CLIENT_PR_FIELDS, "PR feature");
+  if (summary) {
+    await prisma.orderUpdate.create({
+      data: { orderId: input.orderId, authorId: userId, authorName: clientDisplayName(user), body: summary }
     });
   }
 }

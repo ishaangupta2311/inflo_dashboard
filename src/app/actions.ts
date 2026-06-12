@@ -7,8 +7,10 @@ import {
   createOrdersFromCart,
   createQuoteRequest,
   updateOrderLinksClient,
+  updateOrderPrItemsClient,
   type CartLine,
-  type ClientLinkEdit
+  type ClientLinkEdit,
+  type ClientPrEdit
 } from "@/lib/order-backend";
 
 export type CheckoutResult = { ok: true; count: number } | { ok: false; error: string };
@@ -44,6 +46,20 @@ export async function updateOrderLinksClientAction(input: {
 }): Promise<SaveLinksResult> {
   try {
     await updateOrderLinksClient(input);
+    revalidatePath(`/orders/${input.orderId}`);
+    revalidatePath("/orders");
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Couldn't save changes." };
+  }
+}
+
+export async function updateOrderPrItemsClientAction(input: {
+  orderId: string;
+  items: ClientPrEdit[];
+}): Promise<SaveLinksResult> {
+  try {
+    await updateOrderPrItemsClient(input);
     revalidatePath(`/orders/${input.orderId}`);
     revalidatePath("/orders");
     return { ok: true };
