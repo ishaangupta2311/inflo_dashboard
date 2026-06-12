@@ -17,7 +17,6 @@ export type SaveLinksResult = { ok: true } | { ok: false; error: string };
 
 export async function checkoutAction(input: {
   lines: CartLine[];
-  targetUrl: string;
   brief?: string;
 }): Promise<CheckoutResult> {
   try {

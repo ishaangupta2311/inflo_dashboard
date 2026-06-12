@@ -93,7 +93,9 @@ export function OrderCard({ order }: { order: Order }) {
           </div>
 
           <div className="mt-4 border-t border-line pt-4">
-            <p className="line-clamp-1 text-sm font-bold text-ink">{order.targetUrl}</p>
+            {order.targetUrl ? (
+              <p className="line-clamp-1 text-sm font-bold text-ink">{order.targetUrl}</p>
+            ) : null}
             <ul className="mt-3 space-y-2">
               {order.deliverables.map((deliverable) => (
                 <li key={deliverable} className="flex gap-2 text-sm text-muted">

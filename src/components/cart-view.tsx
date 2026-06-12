@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Link2, Minus, Plus, ShoppingCart, Target, Trash2 } from "lucide-react";
+import { ArrowRight, Minus, Plus, ShoppingCart, Target, Trash2 } from "lucide-react";
 import { checkoutAction } from "@/app/actions";
 import { useCart, type CartItem } from "@/components/cart-context";
 import { findBuyable, type Buyable } from "@/lib/catalog";
@@ -12,7 +12,6 @@ import { money } from "@/lib/orders";
 export function CartView() {
   const { items, subtotal, hasMonthly, hydrated, setQuantity, remove, clear } = useCart();
   const router = useRouter();
-  const [targetUrl, setTargetUrl] = useState("");
   const [brief, setBrief] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -22,13 +21,9 @@ export function CartView() {
     .filter((entry): entry is { item: CartItem; buyable: Buyable } => Boolean(entry.buyable));
 
   const checkout = () => {
-    if (!targetUrl.trim()) {
-      setError("Add the URL you want us to work on.");
-      return;
-    }
     setError(null);
     startTransition(async () => {
-      const result = await checkoutAction({ lines: items, targetUrl: targetUrl.trim(), brief: brief.trim() });
+      const result = await checkoutAction({ lines: items, brief: brief.trim() });
       if (result.ok) {
         clear();
         router.push("/orders?created=cart");
@@ -131,19 +126,6 @@ export function CartView() {
         ) : null}
 
         <div className="mt-5 grid gap-4">
-          <label className="block">
-            <span className="mb-2 flex items-center gap-2 text-sm font-black">
-              <Link2 className="size-4 text-lime" />
-              Target URL
-            </span>
-            <input
-              value={targetUrl}
-              onChange={(event) => setTargetUrl(event.target.value)}
-              type="url"
-              placeholder="https://example.com"
-              className="w-full rounded-xl border border-white/15 bg-white/8 px-4 py-3 text-paper outline-none transition placeholder:text-[#9a93a8] focus:border-lime"
-            />
-          </label>
           <label className="block">
             <span className="mb-2 flex items-center gap-2 text-sm font-black">
               <Target className="size-4 text-lime" />

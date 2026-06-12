@@ -251,7 +251,7 @@ export async function createOrder(input: CreateOrderInput) {
 // ---------------------------------------------------------------------------
 
 export type CartLine = { id: string; quantity: number };
-export type CheckoutInput = { lines: CartLine[]; targetUrl: string; brief?: string };
+export type CheckoutInput = { lines: CartLine[]; targetUrl?: string; brief?: string };
 
 type ResolvedLine = { buyable: Buyable; quantity: number };
 
@@ -265,11 +265,9 @@ export async function createOrdersFromCart(input: CheckoutInput) {
   noStore();
   const userId = await requireUserId();
   const email = await currentUserEmail();
-  const targetUrl = input.targetUrl.trim();
-
-  if (!targetUrl) {
-    throw new Error("Target URL is required.");
-  }
+  // Target URL is no longer collected at checkout — link orders capture the
+  // landing page per placement, and other orders use the brief.
+  const targetUrl = input.targetUrl?.trim() ?? "";
 
   const resolved: ResolvedLine[] = input.lines
     .map((line) => ({ buyable: findBuyable(line.id), quantity: Math.max(1, Math.min(99, Math.round(line.quantity || 1))) }))

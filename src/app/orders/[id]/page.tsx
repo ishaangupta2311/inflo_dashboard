@@ -125,15 +125,17 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             <p className="mt-1 font-display text-3xl font-black">
               {order.quoteStatus === "requested" ? "Pending" : money(order.amount)}
             </p>
-            <a
-              href={order.targetUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-3 inline-flex items-center gap-1 break-words text-sm font-bold text-violet hover:text-violet-ink"
-            >
-              {order.targetUrl}
-              <ExternalLink className="size-3.5 shrink-0" />
-            </a>
+            {order.targetUrl ? (
+              <a
+                href={order.targetUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex items-center gap-1 break-words text-sm font-bold text-violet hover:text-violet-ink"
+              >
+                {order.targetUrl}
+                <ExternalLink className="size-3.5 shrink-0" />
+              </a>
+            ) : null}
             {order.status === "Completed" && order.invoiceId ? (
               <a
                 href={invoiceHref(order.invoiceId)}

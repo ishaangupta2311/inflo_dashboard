@@ -47,10 +47,14 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
           </div>
           <div>
             <p className="font-bold text-ink">Target URL</p>
-            <a href={order.targetUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 break-words text-violet hover:text-violet-ink">
-              {order.targetUrl}
-              <ExternalLink className="size-3.5 shrink-0" />
-            </a>
+            {order.targetUrl ? (
+              <a href={order.targetUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 break-words text-violet hover:text-violet-ink">
+                {order.targetUrl}
+                <ExternalLink className="size-3.5 shrink-0" />
+              </a>
+            ) : (
+              <p className="text-muted">—</p>
+            )}
           </div>
           <div>
             <p className="font-bold text-ink">Ordered / Due</p>
