@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, Check, ExternalLink, Link2, Star, Target } from "lucide-react";
 import { createQuoteRequestAction } from "@/app/actions";
 import { AddToCartButton } from "@/components/add-to-cart-button";
+import { AddToCartStepper } from "@/components/add-to-cart-stepper";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { isStaff } from "@/lib/auth";
 import { catalogBySlug } from "@/lib/catalog";
@@ -128,10 +129,9 @@ export default async function StoreServicePage({ params }: { params: Promise<{ s
                       <p className="text-sm text-muted">{addOn.unit}</p>
                     </div>
                     <p className="font-display text-2xl font-black">{money(addOn.price)}</p>
-                    <AddToCartButton
-                      id={addOn.id}
-                      className="inline-flex items-center justify-center gap-2 rounded-full border border-ink px-4 py-2 text-sm font-black text-ink transition hover:bg-ink hover:text-paper"
-                    />
+                    <div className="sm:justify-self-end">
+                      <AddToCartStepper id={addOn.id} />
+                    </div>
                   </div>
                 ))}
               </div>
