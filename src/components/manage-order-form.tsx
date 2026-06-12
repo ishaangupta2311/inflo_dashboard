@@ -30,7 +30,9 @@ export function ManageOrderForm({
   amount,
   quoteStatus,
   linkTotal,
-  linksDelivered
+  linksDelivered,
+  prTotal,
+  prDelivered
 }: {
   orderId: string;
   status: OrderStatus;
@@ -39,11 +41,19 @@ export function ManageOrderForm({
   quoteStatus?: string;
   linkTotal: number;
   linksDelivered: number;
+  prTotal: number;
+  prDelivered: number;
 }) {
   const [state, formAction, pending] = useActionState(updateOrderAction, null);
   const isLinkOrder = linkTotal > 0;
+  const isPrOrder = prTotal > 0;
+  // Link/PR orders track delivery as a count; everything else uses % progress.
+  const isCountOrder = isLinkOrder || isPrOrder;
+  const countTotal = isLinkOrder ? linkTotal : prTotal;
+  const countDelivered = isLinkOrder ? linksDelivered : prDelivered;
+  const countLabel = isLinkOrder ? "Links delivered" : "Features published";
   const isQuoteOrder = Boolean(quoteStatus);
-  const deliveredPct = isLinkOrder ? Math.round((linksDelivered / linkTotal) * 100) : 0;
+  const deliveredPct = isCountOrder && countTotal > 0 ? Math.round((countDelivered / countTotal) * 100) : 0;
 
   return (
     <form action={formAction} className="mt-5 grid gap-4">
@@ -61,13 +71,13 @@ export function ManageOrderForm({
           </select>
         </label>
 
-        {isLinkOrder ? (
+        {isCountOrder ? (
           <div className="block">
-            <span className="mb-2 block text-sm font-black">Links delivered</span>
+            <span className="mb-2 block text-sm font-black">{countLabel}</span>
             <div className="rounded-xl border border-line bg-paper px-4 py-3">
               <div className="flex items-center justify-between text-sm">
                 <span className="font-black">
-                  {linksDelivered} / {linkTotal}
+                  {countDelivered} / {countTotal}
                 </span>
                 <span className="font-mono text-xs text-muted">{deliveredPct}%</span>
               </div>

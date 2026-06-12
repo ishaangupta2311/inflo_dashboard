@@ -16,7 +16,13 @@ export function OrderCard({ order }: { order: Order }) {
   const linkTotal = order.linkTotal ?? 0;
   const linksDelivered = order.linksDelivered ?? 0;
   const isLinkOrder = linkTotal > 0;
-  const barPct = isLinkOrder ? Math.round((linksDelivered / linkTotal) * 100) : order.progress;
+  const prTotal = order.prTotal ?? 0;
+  const prDelivered = order.prDelivered ?? 0;
+  const isPrOrder = prTotal > 0;
+  const isCountOrder = isLinkOrder || isPrOrder;
+  const countTotal = isLinkOrder ? linkTotal : prTotal;
+  const countDelivered = isLinkOrder ? linksDelivered : prDelivered;
+  const barPct = isCountOrder ? Math.round((countDelivered / countTotal) * 100) : order.progress;
 
   return (
     <article className="rounded-2xl border border-line bg-card p-5 shadow-card transition hover:-translate-y-0.5 hover:border-ink">
@@ -55,7 +61,11 @@ export function OrderCard({ order }: { order: Order }) {
                 {order.status}
               </span>
               <span className="font-mono text-xs font-bold text-muted">
-                {isLinkOrder ? `${linksDelivered} / ${linkTotal} links` : `${order.progress}%`}
+                {isLinkOrder
+                  ? `${linksDelivered} / ${linkTotal} links`
+                  : isPrOrder
+                    ? `${prDelivered} / ${prTotal} features`
+                    : `${order.progress}%`}
               </span>
             </div>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-paper-2">

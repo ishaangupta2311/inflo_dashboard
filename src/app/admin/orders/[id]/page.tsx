@@ -5,6 +5,7 @@ import { postUpdateAction } from "@/app/admin/actions";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { ManageOrderForm } from "@/components/manage-order-form";
 import { OrderLinksTable } from "@/components/order-links-table";
+import { OrderPrTable } from "@/components/order-pr-table";
 import { getAdminOrder } from "@/lib/order-backend";
 import { money } from "@/lib/orders";
 
@@ -16,10 +17,13 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
     notFound();
   }
 
-  const { order, updates, links } = detail;
+  const { order, updates, links, prItems } = detail;
   const linkTotal = order.linkTotal ?? 0;
   const linksDelivered = order.linksDelivered ?? 0;
   const isLinkOrder = linkTotal > 0;
+  const prTotal = order.prTotal ?? 0;
+  const prDelivered = order.prDelivered ?? 0;
+  const isPrOrder = prTotal > 0;
 
   return (
     <DashboardShell>
@@ -99,6 +103,25 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
         </section>
       ) : null}
 
+      {isPrOrder ? (
+        <section className="mt-6 rounded-2xl border border-line bg-card p-6 shadow-card">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="font-display text-xl font-black tracking-tight">Media features</h2>
+              <p className="mt-1 text-sm text-muted">
+                Fill the title, PR doclink, publish date, and coverage excel link for each feature.
+              </p>
+            </div>
+            <span className="rounded-full bg-paper px-3 py-1 text-sm font-black">
+              {prDelivered} / {prTotal} published
+            </span>
+          </div>
+          <div className="mt-4">
+            <OrderPrTable orderId={order.id} items={prItems} variant="admin" />
+          </div>
+        </section>
+      ) : null}
+
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <section className="rounded-2xl border border-line bg-card p-6 shadow-card">
           <h2 className="font-display text-xl font-black tracking-tight">Manage order</h2>
@@ -114,6 +137,8 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
             quoteStatus={order.quoteStatus}
             linkTotal={linkTotal}
             linksDelivered={linksDelivered}
+            prTotal={prTotal}
+            prDelivered={prDelivered}
           />
         </section>
 

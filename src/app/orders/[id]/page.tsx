@@ -4,6 +4,7 @@ import { ArrowLeft, CheckCircle2, Download, ExternalLink, MessageSquare } from "
 import { acceptQuoteAction } from "@/app/actions";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { OrderLinksTable } from "@/components/order-links-table";
+import { OrderPrTable } from "@/components/order-pr-table";
 import { isStaff } from "@/lib/auth";
 import { getOrderDetail } from "@/lib/order-backend";
 import { categoryIcons, invoiceHref, money, type OrderStatus } from "@/lib/orders";
@@ -29,12 +30,18 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     notFound();
   }
 
-  const { order, updates, links } = detail;
+  const { order, updates, links, prItems } = detail;
   const Icon = categoryIcons[order.category];
   const linkTotal = order.linkTotal ?? 0;
   const linksDelivered = order.linksDelivered ?? 0;
   const isLinkOrder = linkTotal > 0;
-  const deliveredPct = isLinkOrder ? Math.round((linksDelivered / linkTotal) * 100) : order.progress;
+  const prTotal = order.prTotal ?? 0;
+  const prDelivered = order.prDelivered ?? 0;
+  const isPrOrder = prTotal > 0;
+  const isCountOrder = isLinkOrder || isPrOrder;
+  const countTotal = isLinkOrder ? linkTotal : prTotal;
+  const countDelivered = isLinkOrder ? linksDelivered : prDelivered;
+  const deliveredPct = isCountOrder ? Math.round((countDelivered / countTotal) * 100) : order.progress;
 
   return (
     <DashboardShell>
@@ -151,7 +158,11 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           <div className="flex items-center justify-between gap-3 text-sm">
             <span className={`rounded-full px-3 py-1 font-black ${statusTone[order.status]}`}>{order.status}</span>
             <span className="font-mono text-xs font-bold text-muted">
-              {isLinkOrder ? `${linksDelivered} / ${linkTotal} links delivered` : `${order.progress}%`}
+              {isLinkOrder
+                ? `${linksDelivered} / ${linkTotal} links delivered`
+                : isPrOrder
+                  ? `${prDelivered} / ${prTotal} features published`
+                  : `${order.progress}%`}
             </span>
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-paper-2">
@@ -161,7 +172,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             />
           </div>
 
-          {!isLinkOrder ? (
+          {!isCountOrder ? (
             <ul className="mt-5 grid gap-2 sm:grid-cols-2">
               {order.deliverables.map((deliverable) => (
                 <li key={deliverable} className="flex gap-2 text-sm text-muted">
@@ -183,6 +194,18 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           </p>
           <div className="mt-4">
             <OrderLinksTable orderId={order.id} links={links} variant="client" />
+          </div>
+        </section>
+      ) : null}
+
+      {isPrOrder ? (
+        <section className="mt-6">
+          <h2 className="font-display text-2xl font-black tracking-tight">Your media features</h2>
+          <p className="mt-1 text-sm text-muted">
+            Each feature&apos;s title, PR doc, publish date, and coverage report appear here as your campaign lands.
+          </p>
+          <div className="mt-4">
+            <OrderPrTable orderId={order.id} items={prItems} variant="client" />
           </div>
         </section>
       ) : null}
