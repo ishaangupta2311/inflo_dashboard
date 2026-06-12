@@ -1,4 +1,4 @@
-import { Bot, Link2, Megaphone, Store, TrendingUp } from "lucide-react";
+import { Bot, Link2, Megaphone, TrendingUp } from "lucide-react";
 import type { ComponentType } from "react";
 import type { Order } from "@/lib/orders";
 
@@ -212,23 +212,6 @@ export const catalog: CatalogService[] = [
         ]
       }
     ]
-  },
-  {
-    slug: "seo-reseller",
-    category: "SEO Reseller",
-    name: "SEO Reseller",
-    tagline: "White-label fulfilment with agency-ready reports.",
-    description:
-      "White-label link building and SEO fulfilment with reports ready to hand straight to your agency clients. Pricing is scoped to your volume — request a quote.",
-    icon: Store,
-    sourceUrl: "https://outreachinfluencers.com",
-    mode: "quote",
-    highlights: [
-      "White-label, agency-ready reporting",
-      "Volume-based pricing",
-      "Dedicated fulfilment partner"
-    ],
-    packages: []
   },
   {
     slug: "grow",
