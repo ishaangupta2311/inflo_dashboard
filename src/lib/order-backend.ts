@@ -780,6 +780,55 @@ async function applyLinkProgress(
   }
 }
 
+const CLIENT_LINK_FIELDS = [
+  { key: "anchorText", label: "anchor text" },
+  { key: "landingPage", label: "landing page" }
+] as const;
+
+const ADMIN_LINK_FIELDS = [
+  { key: "anchorText", label: "anchor text" },
+  { key: "landingPage", label: "landing page" },
+  { key: "prospectUrl", label: "prospect URL" },
+  { key: "deliveredDr", label: "DR delivering" },
+  { key: "traffic", label: "traffic" },
+  { key: "publishUrl", label: "publish link" }
+] as const;
+
+function truncateValue(value: string): string {
+  return value.length > 80 ? `${value.slice(0, 79)}…` : value;
+}
+
+// Build a human-readable summary of exactly which link fields changed — e.g.
+// "Link #1: DR delivering set to “77”." — used as the timeline / notification body.
+function summariseLinkEdits(
+  edits: readonly { id: string }[],
+  prior: ReadonlyMap<string, { position: number }>,
+  fields: readonly { key: string; label: string }[]
+): string {
+  const entries: string[] = [];
+  for (const edit of edits) {
+    const was = prior.get(edit.id);
+    if (!was) {
+      continue;
+    }
+    const editRec = edit as Record<string, unknown>;
+    const wasRec = was as Record<string, unknown>;
+    const changes: string[] = [];
+    for (const { key, label } of fields) {
+      const next = String(editRec[key] ?? "").trim();
+      const prev = String(wasRec[key] ?? "").trim();
+      if (next === prev) {
+        continue;
+      }
+      changes.push(next === "" ? `${label} cleared` : `${label} set to “${truncateValue(next)}”`);
+    }
+    if (changes.length > 0) {
+      entries.push(`Link #${was.position}: ${changes.join(", ")}`);
+    }
+  }
+  return entries.length > 0 ? `${entries.join(". ")}.` : "";
+}
+
 export async function updateOrderLinksClient(input: {
   orderId: string;
   links: ClientLinkEdit[];
@@ -795,13 +844,9 @@ export async function updateOrderLinksClient(input: {
 
   const before = await prisma.orderLink.findMany({
     where: { id: { in: input.links.map((l) => l.id) }, orderId: input.orderId },
-    select: { id: true, anchorText: true, landingPage: true }
+    select: { id: true, position: true, anchorText: true, landingPage: true }
   });
   const prior = new Map(before.map((l) => [l.id, l]));
-  const changed = input.links.some((link) => {
-    const was = prior.get(link.id);
-    return was && (was.anchorText !== link.anchorText.trim() || was.landingPage !== link.landingPage.trim());
-  });
 
   await prisma.$transaction(
     input.links.map((link) =>
@@ -812,15 +857,11 @@ export async function updateOrderLinksClient(input: {
     )
   );
 
-  // Notify staff that the client changed their link brief.
-  if (changed) {
+  // Notify staff exactly what the client changed.
+  const summary = summariseLinkEdits(input.links, prior, CLIENT_LINK_FIELDS);
+  if (summary) {
     await prisma.orderUpdate.create({
-      data: {
-        orderId: input.orderId,
-        authorId: userId,
-        authorName: clientDisplayName(user),
-        body: "Updated anchor text and landing pages."
-      }
+      data: { orderId: input.orderId, authorId: userId, authorName: clientDisplayName(user), body: summary }
     });
   }
 }
@@ -842,6 +883,7 @@ export async function updateOrderLinksAdmin(input: {
     where: { id: { in: input.links.map((l) => l.id) }, orderId: input.orderId },
     select: {
       id: true,
+      position: true,
       anchorText: true,
       landingPage: true,
       prospectUrl: true,
@@ -851,18 +893,6 @@ export async function updateOrderLinksAdmin(input: {
     }
   });
   const prior = new Map(before.map((l) => [l.id, l]));
-  const changed = input.links.some((link) => {
-    const was = prior.get(link.id);
-    return (
-      was &&
-      (was.anchorText !== link.anchorText.trim() ||
-        was.landingPage !== link.landingPage.trim() ||
-        was.prospectUrl !== link.prospectUrl.trim() ||
-        was.deliveredDr !== link.deliveredDr.trim() ||
-        was.traffic !== link.traffic.trim() ||
-        was.publishUrl !== link.publishUrl.trim())
-    );
-  });
 
   await prisma.$transaction(
     input.links.map((link) =>
@@ -880,15 +910,11 @@ export async function updateOrderLinksAdmin(input: {
     )
   );
 
-  // Notify the client that we updated their link details.
-  if (changed) {
+  // Notify the client exactly what we changed.
+  const summary = summariseLinkEdits(input.links, prior, ADMIN_LINK_FIELDS);
+  if (summary) {
     await prisma.orderUpdate.create({
-      data: {
-        orderId: input.orderId,
-        authorId: adminId,
-        authorName: adminName(admin),
-        body: "Updated your link details."
-      }
+      data: { orderId: input.orderId, authorId: adminId, authorName: adminName(admin), body: summary }
     });
   }
 
