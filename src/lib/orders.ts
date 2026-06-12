@@ -19,6 +19,8 @@ export type Order = {
   progress: number;
   linkTotal?: number;
   linksDelivered?: number;
+  prTotal?: number;
+  prDelivered?: number;
   targetUrl: string;
   deliverables: string[];
   owner: string;

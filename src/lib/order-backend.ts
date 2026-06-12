@@ -8,6 +8,7 @@ import { serviceOptions, type Order, type OrderStatus } from "@/lib/orders";
 import type {
   Order as OrderRow,
   OrderLink as OrderLinkRow,
+  OrderPrItem as OrderPrItemRow,
   OrderUpdate as OrderUpdateRow
 } from "@/generated/prisma/client";
 
@@ -49,6 +50,8 @@ function toOrder(row: OrderRow): Order {
     progress: row.progress,
     linkTotal: row.linkTotal,
     linksDelivered: row.linksDelivered,
+    prTotal: row.prTotal,
+    prDelivered: row.prDelivered,
     targetUrl: row.targetUrl,
     deliverables: row.deliverables,
     owner: row.owner,
@@ -333,6 +336,43 @@ export async function createOrdersFromCart(input: CheckoutInput) {
         });
       }
 
+      // Digital PR: expand every unit into an individual media-feature row.
+      if (service.category === "Digital PR") {
+        const featureCount = lines.reduce(
+          (sum, { buyable, quantity }) => sum + quantity * buyable.prFeatures,
+          0
+        );
+
+        // featureCount 0 only happens for a misconfigured PR buyable — fall
+        // through to the consolidated deliverables order rather than an empty one.
+        if (featureCount > 0) {
+          const prRows = Array.from({ length: featureCount }, (_, index) => ({ position: index + 1 }));
+
+          return prisma.order.create({
+            data: {
+              userId,
+              userEmail: email,
+              service: `${service.name} — ${prRows.length} ${prRows.length === 1 ? "feature" : "features"}`,
+              category: service.category,
+              packageId,
+              packageName: summariseLines(lines),
+              billing,
+              status: "Brief received",
+              orderedAt: now,
+              dueAt,
+              amount,
+              progress: 0,
+              prTotal: prRows.length,
+              prDelivered: 0,
+              targetUrl,
+              deliverables: briefNote ? [briefNote] : [],
+              owner: "Client Success",
+              prItems: { create: prRows }
+            }
+          });
+        }
+      }
+
       // Everything else: a single consolidated, deliverables-style order.
       return prisma.order.create({
         data: {
@@ -437,7 +477,22 @@ export type OrderLinkEntry = {
   delivered: boolean;
 };
 
-export type OrderDetail = { order: Order; updates: OrderUpdateEntry[]; links: OrderLinkEntry[] };
+export type OrderPrItemEntry = {
+  id: string;
+  position: number;
+  title: string;
+  docUrl: string;
+  publishDate: string;
+  excelUrl: string;
+  delivered: boolean;
+};
+
+export type OrderDetail = {
+  order: Order;
+  updates: OrderUpdateEntry[];
+  links: OrderLinkEntry[];
+  prItems: OrderPrItemEntry[];
+};
 
 export async function getOrderDetail(id: string): Promise<OrderDetail | undefined> {
   noStore();
@@ -446,7 +501,8 @@ export async function getOrderDetail(id: string): Promise<OrderDetail | undefine
     where: { id, userId },
     include: {
       updates: { orderBy: { createdAt: "desc" } },
-      links: { orderBy: { position: "asc" } }
+      links: { orderBy: { position: "asc" } },
+      prItems: { orderBy: { position: "asc" } }
     }
   });
 
@@ -454,7 +510,12 @@ export async function getOrderDetail(id: string): Promise<OrderDetail | undefine
     return undefined;
   }
 
-  return { order: toOrder(row), updates: row.updates.map(toUpdateEntry), links: row.links.map(toOrderLink) };
+  return {
+    order: toOrder(row),
+    updates: row.updates.map(toUpdateEntry),
+    links: row.links.map(toOrderLink),
+    prItems: row.prItems.map(toPrItem)
+  };
 }
 
 export async function acceptQuote(orderId: string): Promise<Order> {
@@ -564,7 +625,12 @@ export type AdminOrder = Order & {
   createdAtLabel: string;
 };
 
-export type AdminOrderDetail = { order: AdminOrder; updates: OrderUpdateEntry[]; links: OrderLinkEntry[] };
+export type AdminOrderDetail = {
+  order: AdminOrder;
+  updates: OrderUpdateEntry[];
+  links: OrderLinkEntry[];
+  prItems: OrderPrItemEntry[];
+};
 
 export type OrderMutationInput = {
   status?: OrderStatus;
@@ -588,7 +654,8 @@ export async function getAdminOrder(id: string): Promise<AdminOrderDetail | unde
     where: { id },
     include: {
       updates: { orderBy: { createdAt: "desc" } },
-      links: { orderBy: { position: "asc" } }
+      links: { orderBy: { position: "asc" } },
+      prItems: { orderBy: { position: "asc" } }
     }
   });
 
@@ -596,7 +663,12 @@ export async function getAdminOrder(id: string): Promise<AdminOrderDetail | unde
     return undefined;
   }
 
-  return { order: toAdminOrder(row), updates: row.updates.map(toUpdateEntry), links: row.links.map(toOrderLink) };
+  return {
+    order: toAdminOrder(row),
+    updates: row.updates.map(toUpdateEntry),
+    links: row.links.map(toOrderLink),
+    prItems: row.prItems.map(toPrItem)
+  };
 }
 
 export async function updateOrder(orderId: string, input: OrderMutationInput): Promise<AdminOrder> {
@@ -615,6 +687,12 @@ export async function updateOrder(orderId: string, input: OrderMutationInput): P
   if (completing && existing.linkTotal > 0 && existing.linksDelivered < existing.linkTotal) {
     throw new Error(
       `Can't complete yet — ${existing.linksDelivered} of ${existing.linkTotal} links delivered. Add a publish link to every row first.`
+    );
+  }
+
+  if (completing && existing.prTotal > 0 && existing.prDelivered < existing.prTotal) {
+    throw new Error(
+      `Can't complete yet — ${existing.prDelivered} of ${existing.prTotal} features published. Set a publish date on every row first.`
     );
   }
 
@@ -796,12 +874,14 @@ function truncateValue(value: string): string {
   return value.length > 80 ? `${value.slice(0, 79)}…` : value;
 }
 
-// Build a human-readable summary of exactly which link fields changed — e.g.
+// Build a human-readable summary of exactly which row fields changed — e.g.
 // "Link #1: DR delivering set to “77”." — used as the timeline / notification body.
-function summariseLinkEdits(
+// `noun` labels the row ("Link", "PR feature").
+function summariseRowEdits(
   edits: readonly { id: string }[],
   prior: ReadonlyMap<string, { position: number }>,
-  fields: readonly { key: string; label: string }[]
+  fields: readonly { key: string; label: string }[],
+  noun = "Link"
 ): string {
   const entries: string[] = [];
   for (const edit of edits) {
@@ -821,7 +901,7 @@ function summariseLinkEdits(
       changes.push(next === "" ? `${label} cleared` : `${label} set to “${truncateValue(next)}”`);
     }
     if (changes.length > 0) {
-      entries.push(`Link #${was.position}: ${changes.join(", ")}`);
+      entries.push(`${noun} #${was.position}: ${changes.join(", ")}`);
     }
   }
   return entries.length > 0 ? `${entries.join(". ")}.` : "";
@@ -856,7 +936,7 @@ export async function updateOrderLinksClient(input: {
   );
 
   // Notify staff exactly what the client changed.
-  const summary = summariseLinkEdits(input.links, prior, CLIENT_LINK_FIELDS);
+  const summary = summariseRowEdits(input.links, prior, CLIENT_LINK_FIELDS);
   if (summary) {
     await prisma.orderUpdate.create({
       data: { orderId: input.orderId, authorId: userId, authorName: clientDisplayName(user), body: summary }
@@ -909,7 +989,7 @@ export async function updateOrderLinksAdmin(input: {
   );
 
   // Notify the client exactly what we changed.
-  const summary = summariseLinkEdits(input.links, prior, ADMIN_LINK_FIELDS);
+  const summary = summariseRowEdits(input.links, prior, ADMIN_LINK_FIELDS);
   if (summary) {
     await prisma.orderUpdate.create({
       data: { orderId: input.orderId, authorId: adminId, authorName: adminName(admin), body: summary }
@@ -918,6 +998,140 @@ export async function updateOrderLinksAdmin(input: {
 
   // Recompute delivered counts and auto-advance status (posts its own note on change).
   await applyLinkProgress(input.orderId, adminId, admin);
+}
+
+// ---------------------------------------------------------------------------
+// Per-feature editing (Digital PR) — every column is staff-owned; the client
+// views them read-only. A non-empty publish date marks a feature published.
+// ---------------------------------------------------------------------------
+
+export type AdminPrEdit = {
+  id: string;
+  title: string;
+  docUrl: string;
+  publishDate: string;
+  excelUrl: string;
+};
+
+const ADMIN_PR_FIELDS = [
+  { key: "title", label: "title" },
+  { key: "docUrl", label: "PR doclink" },
+  { key: "publishDate", label: "publish date" },
+  { key: "excelUrl", label: "publish excel link" }
+] as const;
+
+// Derive a PR order's status from what staff have filled in: nothing → Brief
+// received; a title or doclink drafted → Content review; first feature published
+// → Publishing; every feature published → Completed.
+function derivePrStatus(rows: { publishDate: string; title: string; docUrl: string }[]): OrderStatus {
+  const total = rows.length;
+  const published = rows.filter((r) => r.publishDate.trim() !== "").length;
+  const drafted = rows.filter((r) => r.title.trim() !== "" || r.docUrl.trim() !== "").length;
+
+  if (total > 0 && published === total) return "Completed";
+  if (published > 0) return "Publishing";
+  if (drafted > 0) return "Content review";
+  return "Brief received";
+}
+
+// Recompute published counts/progress and auto-advance status (forward only),
+// mirroring applyLinkProgress for Digital PR orders.
+async function applyPrProgress(
+  orderId: string,
+  adminId: string,
+  admin: Awaited<ReturnType<typeof currentUser>>
+): Promise<void> {
+  const rows = await prisma.orderPrItem.findMany({
+    where: { orderId },
+    select: { publishDate: true, title: true, docUrl: true }
+  });
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+
+  if (!order) {
+    return;
+  }
+
+  const total = rows.length;
+  const delivered = rows.filter((r) => r.publishDate.trim() !== "").length;
+
+  const derived = derivePrStatus(rows);
+  const advancing = STATUS_FLOW.indexOf(derived) > STATUS_FLOW.indexOf(order.status as OrderStatus);
+  const nextStatus = advancing ? derived : (order.status as OrderStatus);
+  const completing = advancing && nextStatus === "Completed";
+
+  await prisma.order.update({
+    where: { id: orderId },
+    data: {
+      prTotal: total,
+      prDelivered: delivered,
+      progress: total ? Math.round((delivered / total) * 100) : 0,
+      ...(advancing ? { status: nextStatus } : {}),
+      ...(completing
+        ? {
+            completedAt: new Date(),
+            progress: 100,
+            ...(order.invoiceId ? {} : { invoiceId: `INV-${order.id}` })
+          }
+        : {})
+    }
+  });
+
+  if (advancing) {
+    await prisma.orderUpdate.create({
+      data: {
+        orderId,
+        authorId: adminId,
+        authorName: adminName(admin),
+        body: `Status moved to “${nextStatus}”.`,
+        status: nextStatus
+      }
+    });
+  }
+}
+
+export async function updateOrderPrItemsAdmin(input: {
+  orderId: string;
+  items: AdminPrEdit[];
+}): Promise<void> {
+  noStore();
+  const { userId: adminId } = await requireStaff();
+  const admin = await currentUser();
+  const order = await prisma.order.findUnique({ where: { id: input.orderId } });
+
+  if (!order) {
+    throw new Error("Order not found.");
+  }
+
+  const before = await prisma.orderPrItem.findMany({
+    where: { id: { in: input.items.map((i) => i.id) }, orderId: input.orderId },
+    select: { id: true, position: true, title: true, docUrl: true, publishDate: true, excelUrl: true }
+  });
+  const prior = new Map(before.map((i) => [i.id, i]));
+
+  await prisma.$transaction(
+    input.items.map((item) =>
+      prisma.orderPrItem.updateMany({
+        where: { id: item.id, orderId: input.orderId },
+        data: {
+          title: item.title.trim(),
+          docUrl: item.docUrl.trim(),
+          publishDate: item.publishDate.trim(),
+          excelUrl: item.excelUrl.trim()
+        }
+      })
+    )
+  );
+
+  // Notify the client exactly what we changed.
+  const summary = summariseRowEdits(input.items, prior, ADMIN_PR_FIELDS, "PR feature");
+  if (summary) {
+    await prisma.orderUpdate.create({
+      data: { orderId: input.orderId, authorId: adminId, authorName: adminName(admin), body: summary }
+    });
+  }
+
+  // Recompute published counts and auto-advance status (posts its own note on change).
+  await applyPrProgress(input.orderId, adminId, admin);
 }
 
 function toAdminOrder(row: OrderRow): AdminOrder {
@@ -954,6 +1168,18 @@ function toOrderLink(row: OrderLinkRow): OrderLinkEntry {
     traffic: row.traffic,
     publishUrl: row.publishUrl,
     delivered: row.publishUrl.trim() !== ""
+  };
+}
+
+function toPrItem(row: OrderPrItemRow): OrderPrItemEntry {
+  return {
+    id: row.id,
+    position: row.position,
+    title: row.title,
+    docUrl: row.docUrl,
+    publishDate: row.publishDate,
+    excelUrl: row.excelUrl,
+    delivered: row.publishDate.trim() !== ""
   };
 }
 

@@ -1,7 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { addOrderUpdate, updateOrder, updateOrderLinksAdmin, type AdminLinkEdit } from "@/lib/order-backend";
+import {
+  addOrderUpdate,
+  updateOrder,
+  updateOrderLinksAdmin,
+  updateOrderPrItemsAdmin,
+  type AdminLinkEdit,
+  type AdminPrEdit
+} from "@/lib/order-backend";
 import type { OrderStatus } from "@/lib/orders";
 
 export type SaveLinksResult = { ok: true } | { ok: false; error: string };
@@ -64,6 +71,19 @@ export async function updateOrderLinksAdminAction(input: {
 }): Promise<SaveLinksResult> {
   try {
     await updateOrderLinksAdmin(input);
+    revalidateOrder(input.orderId);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Couldn't save changes." };
+  }
+}
+
+export async function updateOrderPrItemsAdminAction(input: {
+  orderId: string;
+  items: AdminPrEdit[];
+}): Promise<SaveLinksResult> {
+  try {
+    await updateOrderPrItemsAdmin(input);
     revalidateOrder(input.orderId);
     return { ok: true };
   } catch (error) {

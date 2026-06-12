@@ -14,6 +14,7 @@ export type CatalogPackage = {
   features: string[];
   links?: number; // number of links/placements this package delivers (Link Building)
   dr?: string; // DR tier of those links, e.g. "DR 50+"
+  prFeatures?: number; // number of media features this package delivers (Digital PR)
 };
 
 export type CatalogAddOn = {
@@ -131,6 +132,7 @@ export const catalog: CatalogService[] = [
         price: 499,
         billing: "one_time",
         tagline: "1 media feature",
+        prFeatures: 1,
         features: [
           "1 guaranteed tier-1 / niche feature",
           "Expert quote placement",
@@ -145,6 +147,7 @@ export const catalog: CatalogService[] = [
         billing: "one_time",
         tagline: "3 media features",
         highlight: "Most popular",
+        prFeatures: 3,
         features: [
           "3 tier-1 media features",
           "Story angle & asset creation",
@@ -158,6 +161,7 @@ export const catalog: CatalogService[] = [
         price: 1999,
         billing: "one_time",
         tagline: "8 media features",
+        prFeatures: 8,
         features: [
           "8 tier-1 media features",
           "Full data-led campaign",
@@ -266,6 +270,7 @@ export type Buyable = {
   description: string;
   links: number; // links/placements per unit — 1 for an add-on, the package's count otherwise
   dr: string; // DR tier label, e.g. "DR 30+" (empty for services without a DR tier)
+  prFeatures: number; // media features per unit (Digital PR) — 0 for non-PR buyables
 };
 
 /** Resolves any cart line id (package or à-la-carte add-on) to a uniform buyable. */
@@ -282,7 +287,8 @@ export function findBuyable(id: string): Buyable | undefined {
         billing: pkg.billing,
         description: pkg.tagline,
         links: pkg.links ?? 1,
-        dr: pkg.dr ?? ""
+        dr: pkg.dr ?? "",
+        prFeatures: pkg.prFeatures ?? 0
       };
     }
 
@@ -297,7 +303,8 @@ export function findBuyable(id: string): Buyable | undefined {
         billing: "one_time",
         description: addOn.unit,
         links: 1,
-        dr: addOn.dr
+        dr: addOn.dr,
+        prFeatures: 0
       };
     }
   }
