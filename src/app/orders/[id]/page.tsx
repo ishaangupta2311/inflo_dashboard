@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Download, ExternalLink, MessageSquare } from "lucide-react";
 import { acceptQuoteAction } from "@/app/actions";
-import { OrderRealtime } from "@/components/order-realtime";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { OrderLinksTable } from "@/components/order-links-table";
 import { isStaff } from "@/lib/auth";
@@ -39,7 +38,6 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
   return (
     <DashboardShell>
-      {isLinkOrder ? <OrderRealtime orderId={order.id} /> : null}
       <div className="mb-6">
         <Link href="/orders" className="inline-flex items-center gap-2 text-sm font-black text-muted transition hover:text-ink">
           <ArrowLeft className="size-4" />

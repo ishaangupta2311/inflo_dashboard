@@ -7,7 +7,6 @@ import { updateOrderLinksAdminAction } from "@/app/admin/actions";
 import type { OrderLinkEntry } from "@/lib/order-backend";
 
 type Variant = "client" | "admin";
-type EditableKey = "anchorText" | "landingPage" | "prospectUrl" | "deliveredDr" | "traffic" | "publishUrl";
 
 const inputClass =
   "w-full min-w-36 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm outline-none transition focus:border-violet focus:ring-2 focus:ring-violet/15";
@@ -16,7 +15,11 @@ const headClass = "px-3 py-2 text-left font-mono text-xs font-bold uppercase tra
 const cellClass = "px-3 py-3 align-top text-sm";
 
 function ReadOnlyCell({ value }: { value: string }) {
-  return value.trim() ? <span className="text-ink">{value}</span> : <span className="text-muted">—</span>;
+  return value.trim() ? (
+    <span className="text-ink">{value}</span>
+  ) : (
+    <span className="text-muted">—</span>
+  );
 }
 
 // Ensure a user-entered URL is absolute so it opens the external site rather than
@@ -51,21 +54,17 @@ export function OrderLinksTable({
   links: OrderLinkEntry[];
   variant: Variant;
 }) {
-  // Local edits overlay the live server data per field, so read-only columns stay
-  // current when the page auto-refreshes while in-progress typing is preserved.
-  const [edits, setEdits] = useState<Record<string, Partial<Record<EditableKey, string>>>>({});
+  const [rows, setRows] = useState<OrderLinkEntry[]>(links);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
   const isStaffView = variant === "admin";
 
-  const valueOf = (row: OrderLinkEntry, key: EditableKey): string => edits[row.id]?.[key] ?? row[key];
-
-  const setField = (id: string, key: EditableKey, value: string) => {
+  const update = (id: string, patch: Partial<OrderLinkEntry>) => {
     setSaved(false);
     setError(null);
-    setEdits((prev) => ({ ...prev, [id]: { ...prev[id], [key]: value } }));
+    setRows((prev) => prev.map((row) => (row.id === id ? { ...row, ...patch } : row)));
   };
 
   const save = () => {
@@ -74,28 +73,22 @@ export function OrderLinksTable({
       const result = isStaffView
         ? await updateOrderLinksAdminAction({
             orderId,
-            links: links.map((r) => ({
+            links: rows.map((r) => ({
               id: r.id,
-              anchorText: valueOf(r, "anchorText"),
-              landingPage: valueOf(r, "landingPage"),
-              prospectUrl: valueOf(r, "prospectUrl"),
-              deliveredDr: valueOf(r, "deliveredDr"),
-              traffic: valueOf(r, "traffic"),
-              publishUrl: valueOf(r, "publishUrl")
+              anchorText: r.anchorText,
+              landingPage: r.landingPage,
+              prospectUrl: r.prospectUrl,
+              deliveredDr: r.deliveredDr,
+              traffic: r.traffic,
+              publishUrl: r.publishUrl
             }))
           })
         : await updateOrderLinksClientAction({
             orderId,
-            links: links.map((r) => ({
-              id: r.id,
-              anchorText: valueOf(r, "anchorText"),
-              landingPage: valueOf(r, "landingPage")
-            }))
+            links: rows.map((r) => ({ id: r.id, anchorText: r.anchorText, landingPage: r.landingPage }))
           });
 
       if (result.ok) {
-        // Drop the overlay so cells fall back to the freshly-revalidated server data.
-        setEdits({});
         setSaved(true);
       } else {
         setError(result.error);
@@ -120,8 +113,8 @@ export function OrderLinksTable({
             </tr>
           </thead>
           <tbody>
-            {links.map((row) => {
-              const delivered = valueOf(row, "publishUrl").trim() !== "";
+            {rows.map((row) => {
+              const delivered = row.publishUrl.trim() !== "";
               return (
                 <tr key={row.id} className="border-b border-line last:border-b-0">
                   <td className={`${cellClass} whitespace-nowrap font-black`}>
@@ -146,8 +139,8 @@ export function OrderLinksTable({
                   {/* Anchor text — editable by the client and by staff */}
                   <td className={cellClass}>
                     <input
-                      value={valueOf(row, "anchorText")}
-                      onChange={(e) => setField(row.id, "anchorText", e.target.value)}
+                      value={row.anchorText}
+                      onChange={(e) => update(row.id, { anchorText: e.target.value })}
                       placeholder="Add anchor text"
                       className={inputClass}
                     />
@@ -156,19 +149,19 @@ export function OrderLinksTable({
                   {/* Landing page — editable by the client and by staff */}
                   <td className={cellClass}>
                     <input
-                      value={valueOf(row, "landingPage")}
-                      onChange={(e) => setField(row.id, "landingPage", e.target.value)}
+                      value={row.landingPage}
+                      onChange={(e) => update(row.id, { landingPage: e.target.value })}
                       placeholder="https://your-site.com/page"
                       className={inputClass}
                     />
                   </td>
 
-                  {/* Prospect URL — staff-editable */}
+                  {/* Prospect URL — admin-editable */}
                   <td className={cellClass}>
                     {isStaffView ? (
                       <input
-                        value={valueOf(row, "prospectUrl")}
-                        onChange={(e) => setField(row.id, "prospectUrl", e.target.value)}
+                        value={row.prospectUrl}
+                        onChange={(e) => update(row.id, { prospectUrl: e.target.value })}
                         placeholder="Target site"
                         className={inputClass}
                       />
@@ -177,12 +170,12 @@ export function OrderLinksTable({
                     )}
                   </td>
 
-                  {/* DR delivering — staff-editable */}
+                  {/* DR delivering — admin-editable */}
                   <td className={cellClass}>
                     {isStaffView ? (
                       <input
-                        value={valueOf(row, "deliveredDr")}
-                        onChange={(e) => setField(row.id, "deliveredDr", e.target.value)}
+                        value={row.deliveredDr}
+                        onChange={(e) => update(row.id, { deliveredDr: e.target.value })}
                         placeholder="DR 55"
                         className={`${inputClass} min-w-20`}
                       />
@@ -191,12 +184,12 @@ export function OrderLinksTable({
                     )}
                   </td>
 
-                  {/* Traffic — staff-editable */}
+                  {/* Traffic — admin-editable */}
                   <td className={cellClass}>
                     {isStaffView ? (
                       <input
-                        value={valueOf(row, "traffic")}
-                        onChange={(e) => setField(row.id, "traffic", e.target.value)}
+                        value={row.traffic}
+                        onChange={(e) => update(row.id, { traffic: e.target.value })}
                         placeholder="12k/mo"
                         className={`${inputClass} min-w-24`}
                       />
@@ -205,12 +198,12 @@ export function OrderLinksTable({
                     )}
                   </td>
 
-                  {/* Publish link — staff-editable, client read-only */}
+                  {/* Publish link — admin-editable, client read-only */}
                   <td className={cellClass}>
                     {isStaffView ? (
                       <input
-                        value={valueOf(row, "publishUrl")}
-                        onChange={(e) => setField(row.id, "publishUrl", e.target.value)}
+                        value={row.publishUrl}
+                        onChange={(e) => update(row.id, { publishUrl: e.target.value })}
                         placeholder="https://published-post.com"
                         className={inputClass}
                       />
