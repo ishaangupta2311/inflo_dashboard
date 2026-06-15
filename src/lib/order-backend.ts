@@ -229,14 +229,14 @@ export async function createOrder(input: CreateOrderInput) {
       userId,
       service: input.service.trim() || `${input.category} order`,
       category: input.category,
-      status: "Brief received",
+      status: "In Progress",
       orderedAt,
       dueAt,
       amount: service?.startingPrice ?? 500,
       progress: 12,
       targetUrl: input.targetUrl.trim(),
       deliverables: [
-        "Brief received by fulfilment team",
+        "Order received by fulfilment team",
         `Budget range: ${input.budgetRange}`,
         input.brief.trim() ? `Client note: ${input.brief.trim().slice(0, 96)}` : "Team review pending"
       ],
@@ -322,7 +322,7 @@ export async function createOrdersFromCart(input: CheckoutInput) {
             packageId,
             packageName: summariseLines(lines),
             billing,
-            status: "Brief received",
+            status: "In Progress",
             orderedAt: now,
             dueAt,
             amount,
@@ -358,7 +358,7 @@ export async function createOrdersFromCart(input: CheckoutInput) {
               packageId,
               packageName: summariseLines(lines),
               billing,
-              status: "Brief received",
+              status: "In Progress",
               orderedAt: now,
               dueAt,
               amount,
@@ -384,7 +384,7 @@ export async function createOrdersFromCart(input: CheckoutInput) {
           packageId,
           packageName: summariseLines(lines),
           billing,
-          status: "Brief received",
+          status: "In Progress",
           orderedAt: now,
           dueAt,
           amount,
@@ -395,7 +395,7 @@ export async function createOrdersFromCart(input: CheckoutInput) {
               ({ buyable, quantity }) =>
                 `${buyable.name}${quantity > 1 ? ` ×${quantity}` : ""} — ${buyable.description}`
             ),
-            briefNote ?? "Brief received by fulfilment team"
+            briefNote ?? "Order received by fulfilment team"
           ],
           owner: "Client Success"
         }
@@ -436,7 +436,7 @@ export async function createQuoteRequest(input: QuoteRequestInput) {
       category: service.category,
       billing: "one_time",
       quoteStatus: "requested",
-      status: "Brief received",
+      status: "In Progress",
       orderedAt: now,
       dueAt,
       amount: 0,
@@ -781,26 +781,15 @@ export type AdminLinkEdit = {
 };
 
 // Status order, used to advance a link order forward without ever moving it back.
-const STATUS_FLOW: OrderStatus[] = [
-  "Brief received",
-  "In outreach",
-  "Content review",
-  "Publishing",
-  "Completed"
-];
+const STATUS_FLOW: OrderStatus[] = ["In Progress", "Completed"];
 
-// Derive a link order's status purely from what staff have filled in:
-// nothing yet → Brief received; prospect sites added → In outreach;
-// first link published → Publishing; every link published → Completed.
-function deriveLinkStatus(rows: { publishUrl: string; prospectUrl: string }[]): OrderStatus {
+// Derive a link order's status from what staff have published: every link live
+// → Completed, otherwise it's still In Progress. Forward-only (see STATUS_FLOW).
+function deriveLinkStatus(rows: { publishUrl: string }[]): OrderStatus {
   const total = rows.length;
   const delivered = rows.filter((r) => r.publishUrl.trim() !== "").length;
-  const started = rows.filter((r) => r.prospectUrl.trim() !== "").length;
 
-  if (total > 0 && delivered === total) return "Completed";
-  if (delivered > 0) return "Publishing";
-  if (started > 0) return "In outreach";
-  return "Brief received";
+  return total > 0 && delivered === total ? "Completed" : "In Progress";
 }
 
 // Recompute delivered counts/progress and auto-advance the status (forward only).
@@ -812,7 +801,7 @@ async function applyLinkProgress(
 ): Promise<void> {
   const rows = await prisma.orderLink.findMany({
     where: { orderId },
-    select: { publishUrl: true, prospectUrl: true }
+    select: { publishUrl: true }
   });
   const order = await prisma.order.findUnique({ where: { id: orderId } });
 
@@ -1030,16 +1019,13 @@ const CLIENT_PR_FIELDS = [
 ] as const;
 
 // Derive a PR order's status from publish dates (the staff fulfilment signal):
-// nothing published → Brief received; first feature published → Publishing;
-// every feature published → Completed. Title/doclink are client inputs, so they
-// don't drive status — admins set intermediate stages manually.
+// every feature published → Completed, otherwise In Progress. Title/doclink are
+// client inputs, so they don't drive status. Forward-only (see STATUS_FLOW).
 function derivePrStatus(rows: { publishDate: string }[]): OrderStatus {
   const total = rows.length;
   const published = rows.filter((r) => r.publishDate.trim() !== "").length;
 
-  if (total > 0 && published === total) return "Completed";
-  if (published > 0) return "Publishing";
-  return "Brief received";
+  return total > 0 && published === total ? "Completed" : "In Progress";
 }
 
 // Recompute published counts/progress and auto-advance status (forward only),

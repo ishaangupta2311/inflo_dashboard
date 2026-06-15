@@ -20,7 +20,7 @@ model Order {
   packageName  String?
   billing      String   @default("one_time") // "one_time" | "monthly"
   quoteStatus  String? // null for fixed-price buys; "requested" | "quoted" | "accepted" for quote items
-  status       String   @default("Brief received")
+  status       String   @default("In Progress")
   orderedAt    DateTime @default(now())
   dueAt        DateTime
   completedAt  DateTime?

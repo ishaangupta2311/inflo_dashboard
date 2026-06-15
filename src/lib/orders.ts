@@ -1,12 +1,7 @@
 import { Bot, Link2, Megaphone, Store, TrendingUp } from "lucide-react";
 import type { ComponentType } from "react";
 
-export type OrderStatus =
-  | "Brief received"
-  | "In outreach"
-  | "Content review"
-  | "Publishing"
-  | "Completed";
+export type OrderStatus = "In Progress" | "Completed";
 
 export type Order = {
   id: string;

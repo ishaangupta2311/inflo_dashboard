@@ -13,13 +13,7 @@ import type { OrderStatus } from "@/lib/orders";
 
 export type SaveLinksResult = { ok: true } | { ok: false; error: string };
 
-const STATUSES: OrderStatus[] = [
-  "Brief received",
-  "In outreach",
-  "Content review",
-  "Publishing",
-  "Completed"
-];
+const STATUSES: OrderStatus[] = ["In Progress", "Completed"];
 
 function parseNumber(value: FormDataEntryValue | null): number | undefined {
   if (value === null || value === "") {

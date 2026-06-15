@@ -3,10 +3,7 @@ import { Download, ExternalLink } from "lucide-react";
 import { categoryIcons, invoiceHref, money, type Order } from "@/lib/orders";
 
 const statusTone: Record<Order["status"], string> = {
-  "Brief received": "bg-violet-soft text-violet-ink",
-  "In outreach": "bg-ink text-paper",
-  "Content review": "bg-coral-soft text-coral-ink",
-  Publishing: "bg-lime text-lime-ink",
+  "In Progress": "bg-violet-soft text-violet-ink",
   Completed: "bg-mint text-white"
 };
 

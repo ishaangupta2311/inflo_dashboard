@@ -5,13 +5,7 @@ import { Check, Save } from "lucide-react";
 import { updateOrderAction } from "@/app/admin/actions";
 import type { Order, OrderStatus } from "@/lib/orders";
 
-const STATUSES: OrderStatus[] = [
-  "Brief received",
-  "In outreach",
-  "Content review",
-  "Publishing",
-  "Completed"
-];
+const STATUSES: OrderStatus[] = ["In Progress", "Completed"];
 
 const QUOTE_STATES = [
   { value: "", label: "—" },

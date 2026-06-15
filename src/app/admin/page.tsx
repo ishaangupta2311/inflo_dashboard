@@ -4,20 +4,10 @@ import { DashboardShell } from "@/components/dashboard-shell";
 import { listAllOrders } from "@/lib/order-backend";
 import { money, type OrderStatus } from "@/lib/orders";
 
-const STATUS_FILTERS: ("All" | OrderStatus)[] = [
-  "All",
-  "Brief received",
-  "In outreach",
-  "Content review",
-  "Publishing",
-  "Completed"
-];
+const STATUS_FILTERS: ("All" | OrderStatus)[] = ["All", "In Progress", "Completed"];
 
 const statusTone: Record<OrderStatus, string> = {
-  "Brief received": "bg-violet-soft text-violet-ink",
-  "In outreach": "bg-ink text-paper",
-  "Content review": "bg-coral-soft text-coral-ink",
-  Publishing: "bg-lime text-lime-ink",
+  "In Progress": "bg-violet-soft text-violet-ink",
   Completed: "bg-mint text-white"
 };
 
