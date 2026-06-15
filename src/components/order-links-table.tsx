@@ -48,11 +48,13 @@ function PublishCell({ value }: { value: string }) {
 export function OrderLinksTable({
   orderId,
   links,
-  variant
+  variant,
+  kind = "links"
 }: {
   orderId: string;
   links: OrderLinkEntry[];
   variant: Variant;
+  kind?: "links" | "mentions";
 }) {
   const [rows, setRows] = useState<OrderLinkEntry[]>(links);
   const [pending, startTransition] = useTransition();
@@ -60,6 +62,11 @@ export function OrderLinksTable({
   const [saved, setSaved] = useState(false);
 
   const isStaffView = variant === "admin";
+  // Brand-mention orders reuse this table; only the client-provided column and
+  // a couple of labels change ("Anchor text" → "Mention text").
+  const isMentions = kind === "mentions";
+  const anchorLabel = isMentions ? "Mention text" : "Anchor text";
+  const anchorPlaceholder = isMentions ? "Add mention text" : "Add anchor text";
 
   const update = (id: string, patch: Partial<OrderLinkEntry>) => {
     setSaved(false);
@@ -104,7 +111,7 @@ export function OrderLinksTable({
             <tr className="border-b border-line bg-paper">
               <th className={headClass}>#</th>
               <th className={headClass}>DR ordered</th>
-              <th className={headClass}>Anchor text</th>
+              <th className={headClass}>{anchorLabel}</th>
               <th className={headClass}>Landing page</th>
               <th className={headClass}>Prospect URL</th>
               <th className={headClass}>DR delivering</th>
@@ -136,12 +143,12 @@ export function OrderLinksTable({
                     </span>
                   </td>
 
-                  {/* Anchor text — editable by the client and by staff */}
+                  {/* Anchor / mention text — editable by the client and by staff */}
                   <td className={cellClass}>
                     <input
                       value={row.anchorText}
                       onChange={(e) => update(row.id, { anchorText: e.target.value })}
-                      placeholder="Add anchor text"
+                      placeholder={anchorPlaceholder}
                       className={inputClass}
                     />
                   </td>
@@ -226,12 +233,22 @@ export function OrderLinksTable({
           className="inline-flex items-center justify-center gap-2 rounded-full bg-ink px-5 py-2.5 text-sm font-black text-paper transition hover:-translate-y-0.5 hover:bg-violet disabled:cursor-not-allowed disabled:opacity-60"
         >
           {saved && !pending ? <Check className="size-4" /> : <Save className="size-4" />}
-          {pending ? "Saving…" : saved ? "Saved" : isStaffView ? "Save links" : "Save changes"}
+          {pending
+            ? "Saving…"
+            : saved
+              ? "Saved"
+              : isStaffView
+                ? isMentions
+                  ? "Save mentions"
+                  : "Save links"
+                : "Save changes"}
         </button>
         {isStaffView ? (
           <p className="text-sm text-muted">Adding a publish link marks that placement delivered.</p>
         ) : (
-          <p className="text-sm text-muted">Set anchor text and landing page for each placement.</p>
+          <p className="text-sm text-muted">
+            Set {isMentions ? "mention text" : "anchor text"} and landing page for each placement.
+          </p>
         )}
         {error ? (
           <p className="rounded-lg bg-coral-soft px-3 py-1.5 text-sm font-bold text-coral-ink">{error}</p>

@@ -35,6 +35,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const linkTotal = order.linkTotal ?? 0;
   const linksDelivered = order.linksDelivered ?? 0;
   const isLinkOrder = linkTotal > 0;
+  const isMentionOrder = isLinkOrder && order.category === "AI SEO";
   const prTotal = order.prTotal ?? 0;
   const prDelivered = order.prDelivered ?? 0;
   const isPrOrder = prTotal > 0;
@@ -159,7 +160,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             <span className={`rounded-full px-3 py-1 font-black ${statusTone[order.status]}`}>{order.status}</span>
             <span className="font-mono text-xs font-bold text-muted">
               {isLinkOrder
-                ? `${linksDelivered} / ${linkTotal} links delivered`
+                ? `${linksDelivered} / ${linkTotal} ${isMentionOrder ? "mentions" : "links"} delivered`
                 : isPrOrder
                   ? `${prDelivered} / ${prTotal} features published`
                   : `${order.progress}%`}
@@ -187,13 +188,20 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
       {isLinkOrder ? (
         <section className="mt-6">
-          <h2 className="font-display text-2xl font-black tracking-tight">Your links</h2>
+          <h2 className="font-display text-2xl font-black tracking-tight">
+            {isMentionOrder ? "Your brand mentions" : "Your links"}
+          </h2>
           <p className="mt-1 text-sm text-muted">
-            Set the anchor text and landing page for each placement. We fill in the prospect site, delivered DR,
-            traffic, and the live link as your order is fulfilled.
+            Set the {isMentionOrder ? "mention text" : "anchor text"} and landing page for each placement. We fill in
+            the prospect site, delivered DR, traffic, and the live link as your order is fulfilled.
           </p>
           <div className="mt-4">
-            <OrderLinksTable orderId={order.id} links={links} variant="client" />
+            <OrderLinksTable
+              orderId={order.id}
+              links={links}
+              variant="client"
+              kind={isMentionOrder ? "mentions" : "links"}
+            />
           </div>
         </section>
       ) : null}

@@ -21,6 +21,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
   const linkTotal = order.linkTotal ?? 0;
   const linksDelivered = order.linksDelivered ?? 0;
   const isLinkOrder = linkTotal > 0;
+  const isMentionOrder = isLinkOrder && order.category === "AI SEO";
   const prTotal = order.prTotal ?? 0;
   const prDelivered = order.prDelivered ?? 0;
   const isPrOrder = prTotal > 0;
@@ -88,7 +89,9 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
         <section className="mt-6 rounded-2xl border border-line bg-card p-6 shadow-card">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 className="font-display text-xl font-black tracking-tight">Links</h2>
+              <h2 className="font-display text-xl font-black tracking-tight">
+                {isMentionOrder ? "Brand mentions" : "Links"}
+              </h2>
               <p className="mt-1 text-sm text-muted">
                 Fill the prospect URL, delivered DR, traffic, and publish link for each placement.
               </p>
@@ -98,7 +101,12 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
             </span>
           </div>
           <div className="mt-4">
-            <OrderLinksTable orderId={order.id} links={links} variant="admin" />
+            <OrderLinksTable
+              orderId={order.id}
+              links={links}
+              variant="admin"
+              kind={isMentionOrder ? "mentions" : "links"}
+            />
           </div>
         </section>
       ) : null}
@@ -136,6 +144,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
             progress={order.progress}
             amount={order.amount}
             quoteStatus={order.quoteStatus}
+            category={order.category}
             linkTotal={linkTotal}
             linksDelivered={linksDelivered}
             prTotal={prTotal}

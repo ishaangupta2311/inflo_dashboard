@@ -16,6 +16,7 @@ export function OrderCard({ order }: { order: Order }) {
   const linkTotal = order.linkTotal ?? 0;
   const linksDelivered = order.linksDelivered ?? 0;
   const isLinkOrder = linkTotal > 0;
+  const isMentionOrder = isLinkOrder && order.category === "AI SEO";
   const prTotal = order.prTotal ?? 0;
   const prDelivered = order.prDelivered ?? 0;
   const isPrOrder = prTotal > 0;
@@ -62,7 +63,7 @@ export function OrderCard({ order }: { order: Order }) {
               </span>
               <span className="font-mono text-xs font-bold text-muted">
                 {isLinkOrder
-                  ? `${linksDelivered} / ${linkTotal} links`
+                  ? `${linksDelivered} / ${linkTotal} ${isMentionOrder ? "mentions" : "links"}`
                   : isPrOrder
                     ? `${prDelivered} / ${prTotal} features`
                     : `${order.progress}%`}

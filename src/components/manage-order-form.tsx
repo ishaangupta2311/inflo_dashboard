@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { Check, Save } from "lucide-react";
 import { updateOrderAction } from "@/app/admin/actions";
-import type { OrderStatus } from "@/lib/orders";
+import type { Order, OrderStatus } from "@/lib/orders";
 
 const STATUSES: OrderStatus[] = [
   "Brief received",
@@ -29,6 +29,7 @@ export function ManageOrderForm({
   progress,
   amount,
   quoteStatus,
+  category,
   linkTotal,
   linksDelivered,
   prTotal,
@@ -39,6 +40,7 @@ export function ManageOrderForm({
   progress: number;
   amount: number;
   quoteStatus?: string;
+  category: Order["category"];
   linkTotal: number;
   linksDelivered: number;
   prTotal: number;
@@ -51,7 +53,11 @@ export function ManageOrderForm({
   const isCountOrder = isLinkOrder || isPrOrder;
   const countTotal = isLinkOrder ? linkTotal : prTotal;
   const countDelivered = isLinkOrder ? linksDelivered : prDelivered;
-  const countLabel = isLinkOrder ? "Links delivered" : "Features published";
+  const countLabel = isLinkOrder
+    ? category === "AI SEO"
+      ? "Mentions delivered"
+      : "Links delivered"
+    : "Features published";
   const isQuoteOrder = Boolean(quoteStatus);
   const deliveredPct = isCountOrder && countTotal > 0 ? Math.round((countDelivered / countTotal) * 100) : 0;
 
