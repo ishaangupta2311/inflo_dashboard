@@ -21,6 +21,8 @@ export type Order = {
   owner: string;
   invoiceId?: string;
   quoteStatus?: string;
+  paymentStatus?: "unpaid" | "paid";
+  paidAt?: string;
 };
 
 export type ServiceOption = {

@@ -1,13 +1,18 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Minus, Plus, ShoppingCart, Target, Trash2 } from "lucide-react";
+import { ArrowRight, Lock, Minus, Plus, ShoppingCart, Target, Trash2 } from "lucide-react";
 import { checkoutAction } from "@/app/actions";
 import { useCart, type CartItem } from "@/components/cart-context";
+import { PaypalCheckout } from "@/components/paypal-checkout";
 import { findBuyable, type Buyable } from "@/lib/catalog";
 import { money } from "@/lib/orders";
+
+// When a PayPal client id is configured, checkout requires payment before any
+// order is created. Without it, the free "place order, pay later" flow stays.
+const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 
 export function CartView() {
   const { items, subtotal, hasMonthly, hydrated, setQuantity, remove, clear } = useCart();
@@ -15,11 +20,13 @@ export function CartView() {
   const [brief, setBrief] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const paymentsOn = Boolean(PAYPAL_CLIENT_ID);
 
   const resolved = items
     .map((item) => ({ item, buyable: findBuyable(item.id) }))
     .filter((entry): entry is { item: CartItem; buyable: Buyable } => Boolean(entry.buyable));
 
+  // Free fallback flow (no PayPal configured): create orders immediately.
   const checkout = () => {
     setError(null);
     startTransition(async () => {
@@ -32,6 +39,13 @@ export function CartView() {
       }
     });
   };
+
+  // Paid flow: invoked after PayPal has captured the payment and orders exist.
+  const handlePaid = useCallback(() => {
+    setError(null);
+    clear();
+    router.push("/orders?created=cart");
+  }, [clear, router]);
 
   if (hydrated && resolved.length === 0) {
     return (
@@ -121,7 +135,9 @@ export function CartView() {
         </div>
         {hasMonthly ? (
           <p className="mt-3 text-xs leading-5 text-[#bdb7c9]">
-            Monthly services bill each month after the first invoice.
+            {paymentsOn
+              ? "You're paying the first month now. We'll invoice you for each following month."
+              : "Monthly services bill each month after the first invoice."}
           </p>
         ) : null}
 
@@ -142,18 +158,37 @@ export function CartView() {
 
         {error ? <p className="mt-4 rounded-xl bg-coral/20 px-4 py-3 text-sm font-bold text-white">{error}</p> : null}
 
-        <button
-          type="button"
-          onClick={checkout}
-          disabled={pending || !hydrated}
-          className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-lime px-5 py-4 text-sm font-black text-lime-ink transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {pending ? "Placing order…" : "Place order"}
-          {pending ? null : <ArrowRight className="size-4" />}
-        </button>
-        <p className="mt-3 text-center text-xs text-[#bdb7c9]">
-          No card required yet — payment is added later. This creates live orders the team starts on.
-        </p>
+        {paymentsOn ? (
+          <>
+            <PaypalCheckout
+              clientId={PAYPAL_CLIENT_ID as string}
+              lines={items}
+              brief={brief.trim()}
+              disabled={!hydrated || resolved.length === 0}
+              onPaid={handlePaid}
+              onError={setError}
+            />
+            <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-xs text-[#bdb7c9]">
+              <Lock className="size-3.5 text-lime" />
+              Secure payment via PayPal. Your order starts the moment payment clears.
+            </p>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={checkout}
+              disabled={pending || !hydrated}
+              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-lime px-5 py-4 text-sm font-black text-lime-ink transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {pending ? "Placing order…" : "Place order"}
+              {pending ? null : <ArrowRight className="size-4" />}
+            </button>
+            <p className="mt-3 text-center text-xs text-[#bdb7c9]">
+              No card required yet — payment is added later. This creates live orders the team starts on.
+            </p>
+          </>
+        )}
       </aside>
     </div>
   );

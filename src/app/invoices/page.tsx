@@ -22,7 +22,7 @@ export default async function InvoicesPage() {
   // Payment history = priced orders (a quote still being scoped has no price yet).
   const history = orders.filter((order) => order.quoteStatus !== "requested");
   const totalPaid = history
-    .filter((order) => order.status === "Completed")
+    .filter((order) => order.paymentStatus === "paid")
     .reduce((sum, order) => sum + order.amount, 0);
 
   return (
@@ -33,7 +33,7 @@ export default async function InvoicesPage() {
           <h1 className="font-display text-3xl font-black tracking-tight">Invoices &amp; payment history</h1>
         </div>
         <p className="mt-2 text-sm text-muted">
-          Every order on your account, with an invoice to download once an order is complete.
+          Every order on your account, with an invoice to download once it&apos;s paid or complete.
         </p>
 
         {history.length === 0 ? (
@@ -66,13 +66,20 @@ export default async function InvoicesPage() {
                       <span className="block font-mono text-xs text-muted">{order.id}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`rounded-full px-3 py-1 text-xs font-black ${statusTone[order.status]}`}>
-                        {order.status}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className={`rounded-full px-3 py-1 text-xs font-black ${statusTone[order.status]}`}>
+                          {order.status}
+                        </span>
+                        {order.paymentStatus === "paid" ? (
+                          <span className="rounded-full bg-lime px-3 py-1 text-xs font-black text-lime-ink">
+                            Paid
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right font-black">{money(order.amount)}</td>
                     <td className="px-4 py-3 text-right">
-                      {order.status === "Completed" && order.invoiceId ? (
+                      {order.invoiceId ? (
                         <a
                           href={invoiceHref(order.invoiceId)}
                           download={`${order.invoiceId}.pdf`}

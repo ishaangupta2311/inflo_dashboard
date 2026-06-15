@@ -62,7 +62,9 @@ function toOrder(row: OrderRow): Order {
     deliverables: row.deliverables,
     owner: row.owner,
     invoiceId: row.invoiceId ?? undefined,
-    quoteStatus: row.quoteStatus ?? undefined
+    quoteStatus: row.quoteStatus ?? undefined,
+    paymentStatus: row.paymentStatus === "paid" ? "paid" : "unpaid",
+    paidAt: row.paidAt ? formatDate(row.paidAt) : undefined
   };
 }
 
@@ -184,12 +186,14 @@ async function buildInvoicePdf(row: OrderRow): Promise<Uint8Array> {
   }
 
   // Meta (right column)
-  const issued = row.completedAt ?? new Date();
+  const issued = row.completedAt ?? row.paidAt ?? new Date();
+  const paid = row.paymentStatus === "paid";
   const meta: [string, string][] = [
     ["Invoice", row.invoiceId ?? "—"],
     ["Order", row.id],
     ["Issued", formatDate(issued)],
-    ["Status", row.status]
+    ["Status", row.status],
+    ["Payment", paid ? `Paid${row.paidAt ? ` · ${formatDate(row.paidAt)}` : ""}` : "Due"]
   ];
   let my = 612;
   for (const [label, value] of meta) {
@@ -332,7 +336,14 @@ export async function createOrder(input: CreateOrderInput) {
 // ---------------------------------------------------------------------------
 
 export type CartLine = { id: string; quantity: number };
-export type CheckoutInput = { lines: CartLine[]; targetUrl?: string; brief?: string };
+// `payment`, when present, marks every created order paid — the cart flow only
+// passes it after PayPal has actually captured the money.
+export type CheckoutInput = {
+  lines: CartLine[];
+  targetUrl?: string;
+  brief?: string;
+  payment?: { ref: string; paidAt?: Date };
+};
 
 type ResolvedLine = { buyable: Buyable; quantity: number };
 
@@ -340,6 +351,29 @@ function summariseLines(lines: ResolvedLine[]): string {
   return lines
     .map(({ buyable, quantity }) => (quantity > 1 ? `${buyable.name} ×${quantity}` : buyable.name))
     .join(", ");
+}
+
+// Resolve raw cart lines to catalog buyables, dropping unknown ids and clamping
+// quantities. Shared by priceCart (server-authoritative total for PayPal) and
+// createOrdersFromCart, so the price quoted and the price charged can't diverge.
+function resolveCartLines(lines: CartLine[]): ResolvedLine[] {
+  return lines
+    .map((line) => ({
+      buyable: findBuyable(line.id),
+      quantity: Math.max(1, Math.min(99, Math.round(line.quantity || 1)))
+    }))
+    .filter((entry): entry is ResolvedLine => Boolean(entry.buyable));
+}
+
+// Authoritative server-side price for a cart. Used to set the PayPal order amount
+// and to re-verify it at capture — the client never supplies the amount.
+export function priceCart(lines: CartLine[]): { amount: number; description: string } {
+  const resolved = resolveCartLines(lines);
+  if (resolved.length === 0) {
+    throw new Error("Your cart is empty.");
+  }
+  const amount = resolved.reduce((sum, { buyable, quantity }) => sum + buyable.price * quantity, 0);
+  return { amount, description: summariseLines(resolved) };
 }
 
 export async function createOrdersFromCart(input: CheckoutInput) {
@@ -350,13 +384,34 @@ export async function createOrdersFromCart(input: CheckoutInput) {
   // landing page per placement, and other orders use the brief.
   const targetUrl = input.targetUrl?.trim() ?? "";
 
-  const resolved: ResolvedLine[] = input.lines
-    .map((line) => ({ buyable: findBuyable(line.id), quantity: Math.max(1, Math.min(99, Math.round(line.quantity || 1))) }))
-    .filter((entry): entry is ResolvedLine => Boolean(entry.buyable));
+  // Idempotency: a duplicated PayPal capture (double-click / retry) must not
+  // create a second set of orders. paymentRef is the PayPal order id, unique per
+  // checkout, so if we've already recorded it, return what we created before.
+  if (input.payment) {
+    const existing = await prisma.order.findMany({
+      where: { userId, paymentRef: input.payment.ref },
+      orderBy: { createdAt: "asc" }
+    });
+    if (existing.length > 0) {
+      return existing.map(toOrder);
+    }
+  }
+
+  const resolved = resolveCartLines(input.lines);
 
   if (resolved.length === 0) {
     throw new Error("Your cart is empty.");
   }
+
+  // Paid checkouts stamp every created order paid; the free fallback flow leaves
+  // them unpaid. Spread into each order.create below.
+  const paymentData = input.payment
+    ? {
+        paymentStatus: "paid",
+        paidAt: input.payment.paidAt ?? new Date(),
+        paymentRef: input.payment.ref
+      }
+    : {};
 
   // One order per catalog service — all lines of the same service consolidate together.
   const groups = new Map<string, ResolvedLine[]>();
@@ -410,6 +465,7 @@ export async function createOrdersFromCart(input: CheckoutInput) {
             targetUrl,
             deliverables: briefNote ? [briefNote] : [],
             owner: "Client Success",
+            ...paymentData,
             links: { create: linkRows }
           }
         });
@@ -446,6 +502,7 @@ export async function createOrdersFromCart(input: CheckoutInput) {
               targetUrl,
               deliverables: briefNote ? [briefNote] : [],
               owner: "Client Success",
+              ...paymentData,
               prItems: { create: prRows }
             }
           });
@@ -475,18 +532,32 @@ export async function createOrdersFromCart(input: CheckoutInput) {
             ),
             briefNote ?? "Order received by fulfilment team"
           ],
-          owner: "Client Success"
+          owner: "Client Success",
+          ...paymentData
         }
       });
     })
   );
 
+  // Paid orders get an invoice id at creation so the client can download a
+  // receipt immediately (delivery completion later reuses the same id). The
+  // free flow keeps the old behaviour: an invoice is assigned only on completion.
+  let finalRows = created;
+  if (input.payment) {
+    finalRows = await prisma.$transaction(
+      created.map((o) =>
+        prisma.order.update({ where: { id: o.id }, data: { invoiceId: `INV-${o.id}` } })
+      )
+    );
+  }
+
   await sendOrderReceivedEmail({
     to: email,
-    orders: created.map((o) => ({ id: o.id, service: o.service, amount: o.amount, billing: o.billing }))
+    orders: finalRows.map((o) => ({ id: o.id, service: o.service, amount: o.amount, billing: o.billing })),
+    paid: Boolean(input.payment)
   });
 
-  return created.map(toOrder);
+  return finalRows.map(toOrder);
 }
 
 export type QuoteRequestInput = { slug: string; targetUrl: string; brief?: string };

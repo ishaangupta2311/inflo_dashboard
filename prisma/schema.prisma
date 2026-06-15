@@ -21,6 +21,10 @@ model Order {
   billing      String   @default("one_time") // "one_time" | "monthly"
   quoteStatus  String? // null for fixed-price buys; "requested" | "quoted" | "accepted" for quote items
   status       String   @default("In Progress")
+  // Payment (delivery status above is separate from whether the order is paid).
+  paymentStatus String  @default("unpaid") // "unpaid" | "paid"
+  paidAt        DateTime?
+  paymentRef    String? // PayPal order id — also the idempotency key for capture
   orderedAt    DateTime @default(now())
   dueAt        DateTime
   completedAt  DateTime?
@@ -42,6 +46,7 @@ model Order {
   prItems      OrderPrItem[]
 
   @@index([userId])
+  @@index([paymentRef])
   @@map("orders")
 }
 

@@ -67,6 +67,7 @@ function shell(heading: string, bodyHtml: string, cta?: { label: string; href: s
 export async function sendOrderReceivedEmail(opts: {
   to?: string | null;
   orders: { id: string; service: string; amount: number; billing: string }[];
+  paid?: boolean;
 }): Promise<void> {
   const rows = opts.orders
     .map(
@@ -75,12 +76,26 @@ export async function sendOrderReceivedEmail(opts: {
     )
     .join("");
   const multiple = opts.orders.length > 1;
-  const body = `<p style="margin:0 0 16px;color:#6b6675;">Thanks — we've received your ${multiple ? "orders" : "order"} and the team is getting started. Here's what you ordered:</p>
-    <table style="width:100%;border-collapse:collapse;font-size:14px;">${rows}</table>`;
+  const total = opts.orders.reduce((sum, o) => sum + o.amount, 0);
+  const intro = opts.paid
+    ? `Thanks — your payment has been received and the team is getting started on your ${multiple ? "orders" : "order"}. Here's what you paid for:`
+    : `Thanks — we've received your ${multiple ? "orders" : "order"} and the team is getting started. Here's what you ordered:`;
+  const totalRow = opts.paid
+    ? `<tr><td style="padding:12px 0 0;font-weight:800;">Paid today</td><td style="padding:12px 0 0;text-align:right;font-weight:800;white-space:nowrap;">${money(total)}</td></tr>`
+    : "";
+  const body = `<p style="margin:0 0 16px;color:#6b6675;">${intro}</p>
+    <table style="width:100%;border-collapse:collapse;font-size:14px;">${rows}${totalRow}</table>`;
   await sendEmail({
     to: opts.to,
-    subject: multiple ? "We've received your orders" : "We've received your order",
-    html: shell("Order received", body, { label: "View your orders", href: `${APP_URL}/orders` })
+    subject: opts.paid
+      ? "Payment received — your order is in"
+      : multiple
+        ? "We've received your orders"
+        : "We've received your order",
+    html: shell(opts.paid ? "Payment received" : "Order received", body, {
+      label: "View your orders",
+      href: `${APP_URL}/orders`
+    })
   });
 }
 
