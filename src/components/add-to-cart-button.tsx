@@ -13,7 +13,7 @@ export function AddToCartButton({
   label?: string;
   className?: string;
 }) {
-  const { add } = useCart();
+  const { add, bump, count } = useCart();
   const [added, setAdded] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -21,6 +21,9 @@ export function AddToCartButton({
     <button
       type="button"
       onClick={() => {
+        if (count === 0) {
+          bump();
+        }
         add(id);
         setAdded(true);
         if (timer.current) {

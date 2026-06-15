@@ -4,14 +4,19 @@ import { Minus, Plus } from "lucide-react";
 import { useCart } from "@/components/cart-context";
 
 export function AddToCartStepper({ id }: { id: string }) {
-  const { items, add, setQuantity } = useCart();
+  const { items, add, setQuantity, bump, count } = useCart();
   const quantity = items.find((item) => item.id === id)?.quantity ?? 0;
 
   if (quantity === 0) {
     return (
       <button
         type="button"
-        onClick={() => add(id)}
+        onClick={() => {
+          if (count === 0) {
+            bump();
+          }
+          add(id);
+        }}
         className="inline-flex items-center justify-center gap-2 rounded-full border border-ink px-4 py-2 text-sm font-black text-ink transition hover:bg-ink hover:text-paper"
       >
         <Plus className="size-4" />

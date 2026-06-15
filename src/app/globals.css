@@ -56,3 +56,25 @@ a {
   background: var(--color-lime);
   color: var(--color-ink);
 }
+
+/* Cart "added" feedback — one-shot pop of the icon + an expanding ring,
+   played when the cart goes from empty to its first item. */
+@keyframes cart-pop {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.28); }
+  55% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+@keyframes cart-ping-once {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  100% { transform: scale(1.75); opacity: 0; }
+}
+
+.cart-pop {
+  animation: cart-pop 520ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.cart-ping-once {
+  animation: cart-ping-once 650ms ease-out forwards;
+}

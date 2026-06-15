@@ -11,7 +11,9 @@ type CartContextValue = {
   subtotal: number;
   hasMonthly: boolean;
   hydrated: boolean;
+  pulseToken: number;
   add: (id: string, quantity?: number) => void;
+  bump: () => void;
   setQuantity: (id: string, quantity: number) => void;
   remove: (id: string) => void;
   clear: () => void;
@@ -23,6 +25,9 @@ const STORAGE_KEY = "inflo.cart.v1";
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  // Bumped only on an empty→first-item transition so the cart icon can draw the
+  // eye. Resets to 0 on reload, so it never fires on hydration — only real adds.
+  const [pulseToken, setPulseToken] = useState(0);
 
   useEffect(() => {
     try {
@@ -83,6 +88,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const clear = useCallback(() => setItems([]), []);
 
+  const bump = useCallback(() => setPulseToken((token) => token + 1), []);
+
   const { count, subtotal, hasMonthly } = useMemo(() => {
     let nextCount = 0;
     let nextSubtotal = 0;
@@ -107,7 +114,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     subtotal,
     hasMonthly,
     hydrated,
+    pulseToken,
     add,
+    bump,
     setQuantity,
     remove,
     clear

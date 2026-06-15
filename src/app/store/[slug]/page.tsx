@@ -4,6 +4,7 @@ import { ArrowLeft, Check, ExternalLink, Link2, Star, Target } from "lucide-reac
 import { createQuoteRequestAction } from "@/app/actions";
 import { AddToCartButton } from "@/components/add-to-cart-button";
 import { AddToCartStepper } from "@/components/add-to-cart-stepper";
+import { CheckoutButton } from "@/components/checkout-button";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { isStaff } from "@/lib/auth";
 import { catalogBySlug } from "@/lib/catalog";
@@ -111,6 +112,10 @@ export default async function StoreServicePage({ params }: { params: Promise<{ s
                   </div>
                 </div>
               ))}
+            </div>
+
+            <div className="mt-6 flex justify-center">
+              <CheckoutButton />
             </div>
           </section>
 
