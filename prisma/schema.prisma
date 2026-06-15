@@ -108,6 +108,11 @@ model User {
   firstName String?
   lastName  String?
   imageUrl  String?
+  // Client-managed billing details, rendered on invoices. The Clerk webhook only
+  // writes email/name/image, so it never clobbers these.
+  companyName    String? // company / legal name
+  billingAddress String? // multi-line billing address
+  taxId          String? // Tax / VAT / GST ID
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -10,8 +10,28 @@ import {
   removeMember,
   revokeInvite
 } from "@/lib/team";
+import { updateBillingDetails } from "@/lib/order-backend";
 
 export type TeamActionResult = { ok: true; message: string } | { ok: false; error: string };
+export type BillingActionResult = { ok: true; message: string } | { ok: false; error: string };
+
+export async function updateBillingDetailsAction(
+  _prev: BillingActionResult | null,
+  formData: FormData
+): Promise<BillingActionResult> {
+  try {
+    await updateBillingDetails({
+      companyName: String(formData.get("companyName") || ""),
+      billingAddress: String(formData.get("billingAddress") || ""),
+      taxId: String(formData.get("taxId") || "")
+    });
+    revalidatePath("/settings");
+    revalidatePath("/invoices");
+    return { ok: true, message: "Billing details saved." };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Could not save billing details." };
+  }
+}
 
 async function signUpUrl(): Promise<string> {
   const h = await headers();

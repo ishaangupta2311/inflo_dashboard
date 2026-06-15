@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@clerk/nextjs/server";
-import { Shield, Users } from "lucide-react";
+import { Receipt, Shield, Users } from "lucide-react";
 import { changeRoleAction, removeMemberAction, revokeInviteAction } from "@/app/settings/actions";
 import { AddMemberForm } from "@/components/add-member-form";
+import { BillingDetailsForm } from "@/components/billing-details-form";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { canManageTeam, getRole } from "@/lib/auth";
+import { getBillingDetails } from "@/lib/order-backend";
 import { ROLE_LABEL, assignableRoles, canManage, type StaffRole } from "@/lib/roles";
 import { getTeam } from "@/lib/team";
 
@@ -35,6 +37,8 @@ export default async function SettingsPage() {
 
   const roster = manage ? await getTeam(user.id) : null;
   const grantable = role ? assignableRoles(role) : [];
+  // Clients (no staff role) manage the billing details that appear on their invoices.
+  const billing = role ? null : await getBillingDetails();
 
   return (
     <DashboardShell>
@@ -60,6 +64,19 @@ export default async function SettingsPage() {
           Manage your profile, email, and password from the account menu (your avatar, top right).
         </p>
       </section>
+
+      {billing ? (
+        <section className="mt-6 rounded-3xl border border-line bg-card p-6 shadow-card lg:p-8">
+          <div className="flex items-center gap-2">
+            <Receipt className="size-5 text-violet" />
+            <h2 className="font-display text-2xl font-black tracking-tight">Billing details</h2>
+          </div>
+          <p className="mt-1 text-sm text-muted">
+            Company name, address, and tax ID shown on your invoices. Leave blank to bill to your account email.
+          </p>
+          <BillingDetailsForm details={billing} />
+        </section>
+      ) : null}
 
       {manage && role && roster ? (
         <section className="mt-6 rounded-3xl border border-line bg-card p-6 shadow-card lg:p-8">

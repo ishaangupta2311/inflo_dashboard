@@ -5,6 +5,12 @@ import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/auth";
 import { catalogBySlug, findBuyable, type Buyable } from "@/lib/catalog";
 import { serviceOptions, type Order, type OrderStatus } from "@/lib/orders";
+import {
+  sendMessageEmail,
+  sendOrderCompletedEmail,
+  sendOrderReceivedEmail,
+  sendPublishedEmail
+} from "@/lib/email";
 import type {
   Order as OrderRow,
   OrderLink as OrderLinkRow,
@@ -71,6 +77,40 @@ export async function listOrders() {
   return rows.map(toOrder);
 }
 
+export type BillingDetails = { companyName: string; billingAddress: string; taxId: string };
+
+// Client-managed billing details (company name, address, tax id) rendered on invoices.
+export async function getBillingDetails(): Promise<BillingDetails> {
+  noStore();
+  const userId = await requireUserId();
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { companyName: true, billingAddress: true, taxId: true }
+  });
+  return {
+    companyName: user?.companyName ?? "",
+    billingAddress: user?.billingAddress ?? "",
+    taxId: user?.taxId ?? ""
+  };
+}
+
+export async function updateBillingDetails(input: BillingDetails): Promise<void> {
+  noStore();
+  const userId = await requireUserId();
+  const email = await currentUserEmail();
+  const data = {
+    companyName: input.companyName.trim() || null,
+    billingAddress: input.billingAddress.trim() || null,
+    taxId: input.taxId.trim() || null
+  };
+  // Upsert because the user row may not exist yet (webhook is eventually consistent).
+  await prisma.user.upsert({
+    where: { id: userId },
+    create: { id: userId, email: email ?? null, ...data },
+    update: data
+  });
+}
+
 export async function getOrder(id: string) {
   noStore();
   const userId = await requireUserId();
@@ -95,6 +135,11 @@ export async function getInvoicePdf(
 }
 
 async function buildInvoicePdf(row: OrderRow): Promise<Uint8Array> {
+  const billing = await prisma.user.findUnique({
+    where: { id: row.userId },
+    select: { companyName: true, billingAddress: true, taxId: true }
+  });
+
   const doc = await PDFDocument.create();
   doc.setTitle(`Invoice ${row.invoiceId ?? row.id}`);
 
@@ -119,9 +164,24 @@ async function buildInvoicePdf(row: OrderRow): Promise<Uint8Array> {
   page.drawText("Solutions", { x: M, y: height - 86, size: 21, font: bold, color: lime });
   page.drawText("INVOICE", { x: rightX("INVOICE", 26), y: height - 70, size: 26, font: bold, color: white });
 
-  // Billed to
+  // Billed to — company billing details when present, falling back to the email.
   page.drawText("BILLED TO", { x: M, y: 612, size: 9, font: bold, color: muted });
-  page.drawText(row.userEmail ?? "Account holder", { x: M, y: 594, size: 12, font: helv, color: ink });
+  const billLines: { text: string; bold?: boolean; soft?: boolean }[] = [];
+  if (billing?.companyName) billLines.push({ text: billing.companyName, bold: true });
+  billLines.push({ text: row.userEmail ?? "Account holder" });
+  if (billing?.billingAddress) {
+    for (const ln of billing.billingAddress.split(/\r?\n/).map((s) => s.trim()).filter(Boolean).slice(0, 3)) {
+      billLines.push({ text: ln, soft: true });
+    }
+  }
+  if (billing?.taxId) billLines.push({ text: `Tax ID: ${billing.taxId}`, soft: true });
+
+  let by = 594;
+  for (const bl of billLines) {
+    const text = bl.text.length > 46 ? `${bl.text.slice(0, 45)}…` : bl.text;
+    page.drawText(text, { x: M, y: by, size: bl.bold ? 12 : 10, font: bl.bold ? bold : helv, color: bl.soft ? muted : ink });
+    by -= 16;
+  }
 
   // Meta (right column)
   const issued = row.completedAt ?? new Date();
@@ -177,6 +237,24 @@ async function buildInvoicePdf(row: OrderRow): Promise<Uint8Array> {
   page.drawText("outreachinfluencers.com", { x: M, y: 74, size: 10, font: bold, color: ink });
 
   return doc.save();
+}
+
+// Email the client their completion notice with the invoice PDF attached.
+// Best-effort: a PDF-build failure is logged but still sends the notice.
+async function notifyOrderCompleted(row: OrderRow): Promise<void> {
+  let invoicePdf: Uint8Array | undefined;
+  try {
+    invoicePdf = await buildInvoicePdf(row);
+  } catch (err) {
+    console.error("[email] invoice PDF build failed:", err);
+  }
+  await sendOrderCompletedEmail({
+    to: row.userEmail,
+    orderId: row.id,
+    service: row.service,
+    invoiceId: row.invoiceId,
+    invoicePdf
+  });
 }
 
 export async function getDashboardData() {
@@ -402,6 +480,11 @@ export async function createOrdersFromCart(input: CheckoutInput) {
       });
     })
   );
+
+  await sendOrderReceivedEmail({
+    to: email,
+    orders: created.map((o) => ({ id: o.id, service: o.service, amount: o.amount, billing: o.billing }))
+  });
 
   return created.map(toOrder);
 }
@@ -737,6 +820,10 @@ export async function updateOrder(orderId: string, input: OrderMutationInput): P
     });
   }
 
+  if (completing && existing.status !== "Completed") {
+    await notifyOrderCompleted(updated);
+  }
+
   return toAdminOrder(updated);
 }
 
@@ -758,6 +845,14 @@ export async function addOrderUpdate(orderId: string, body: string): Promise<Ord
 
   const row = await prisma.orderUpdate.create({
     data: { orderId, authorId: adminId, authorName: adminName(admin), body: text }
+  });
+
+  await sendMessageEmail({
+    to: existing.userEmail,
+    orderId,
+    service: existing.service,
+    authorName: adminName(admin),
+    body: text
   });
 
   return toUpdateEntry(row);
@@ -817,7 +912,7 @@ async function applyLinkProgress(
   const nextStatus = advancing ? derived : (order.status as OrderStatus);
   const completing = advancing && nextStatus === "Completed";
 
-  await prisma.order.update({
+  const updatedRow = await prisma.order.update({
     where: { id: orderId },
     data: {
       linkTotal: total,
@@ -844,6 +939,10 @@ async function applyLinkProgress(
         status: nextStatus
       }
     });
+  }
+
+  if (completing) {
+    await notifyOrderCompleted(updatedRow);
   }
 }
 
@@ -989,6 +1088,29 @@ export async function updateOrderLinksAdmin(input: {
 
   // Recompute delivered counts and auto-advance status (posts its own note on change).
   await applyLinkProgress(input.orderId, adminId, admin);
+
+  // Email the client about placements that went live in this save.
+  const newlyPublished = input.links.filter(
+    (l) => l.publishUrl.trim() !== "" && (prior.get(l.id)?.publishUrl ?? "").trim() === ""
+  );
+  if (newlyPublished.length > 0) {
+    const order = await prisma.order.findUnique({
+      where: { id: input.orderId },
+      select: { userEmail: true, service: true, category: true }
+    });
+    if (order?.userEmail) {
+      await sendPublishedEmail({
+        to: order.userEmail,
+        orderId: input.orderId,
+        service: order.service,
+        kind: order.category === "AI SEO" ? "mentions" : "links",
+        items: newlyPublished.map((l) => ({
+          title: l.anchorText.trim() || `Placement #${prior.get(l.id)?.position ?? ""}`.trim(),
+          url: l.publishUrl.trim()
+        }))
+      });
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -1053,7 +1175,7 @@ async function applyPrProgress(
   const nextStatus = advancing ? derived : (order.status as OrderStatus);
   const completing = advancing && nextStatus === "Completed";
 
-  await prisma.order.update({
+  const updatedRow = await prisma.order.update({
     where: { id: orderId },
     data: {
       prTotal: total,
@@ -1080,6 +1202,10 @@ async function applyPrProgress(
         status: nextStatus
       }
     });
+  }
+
+  if (completing) {
+    await notifyOrderCompleted(updatedRow);
   }
 }
 
@@ -1163,6 +1289,29 @@ export async function updateOrderPrItemsAdmin(input: {
 
   // Recompute published counts and auto-advance status (posts its own note on change).
   await applyPrProgress(input.orderId, adminId, admin);
+
+  // Email the client about features published in this save.
+  const newlyPublished = input.items.filter(
+    (i) => i.publishDate.trim() !== "" && (prior.get(i.id)?.publishDate ?? "").trim() === ""
+  );
+  if (newlyPublished.length > 0) {
+    const order = await prisma.order.findUnique({
+      where: { id: input.orderId },
+      select: { userEmail: true, service: true }
+    });
+    if (order?.userEmail) {
+      await sendPublishedEmail({
+        to: order.userEmail,
+        orderId: input.orderId,
+        service: order.service,
+        kind: "features",
+        items: newlyPublished.map((i) => ({
+          title: i.title.trim() || `Feature #${prior.get(i.id)?.position ?? ""}`.trim(),
+          url: i.docUrl.trim() || i.excelUrl.trim() || undefined
+        }))
+      });
+    }
+  }
 }
 
 function toAdminOrder(row: OrderRow): AdminOrder {
