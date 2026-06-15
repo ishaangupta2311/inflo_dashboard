@@ -193,6 +193,8 @@ export const catalog: CatalogService[] = [
         price: 600,
         billing: "one_time",
         tagline: "3 links, DR 50+",
+        links: 3,
+        dr: "DR 50+",
         features: [
           "3 brand-mention placements on DR 50+ sites",
           "Entity-aligned content",
@@ -206,6 +208,8 @@ export const catalog: CatalogService[] = [
         billing: "one_time",
         tagline: "8 links, DR 50+",
         highlight: "Best value",
+        links: 8,
+        dr: "DR 50+",
         features: [
           "8 brand-mention placements on DR 50+ sites",
           "Entity & citation strategy",
@@ -218,6 +222,8 @@ export const catalog: CatalogService[] = [
         price: 2500,
         billing: "one_time",
         tagline: "15 links, DR 40–50+",
+        links: 15,
+        dr: "DR 40–50+",
         features: [
           "15 brand-mention placements on DR 40–50+ sites",
           "Full entity & schema strategy",

@@ -304,8 +304,9 @@ export async function createOrdersFromCart(input: CheckoutInput) {
       const dueAt = new Date(now);
       dueAt.setDate(now.getDate() + leadDaysForCategory(service.category));
 
-      // Link Building: expand every unit into an individual link row.
-      if (service.category === "Link Building") {
+      // Link Building & AI SEO brand mentions: expand every unit into an
+      // individual placement row (both render as a per-row table, not %).
+      if (service.category === "Link Building" || service.category === "AI SEO") {
         const linkRows = lines
           .flatMap(({ buyable, quantity }) =>
             Array.from({ length: quantity * buyable.links }, () => buyable.dr)
@@ -685,8 +686,9 @@ export async function updateOrder(orderId: string, input: OrderMutationInput): P
   const completing = input.status === "Completed";
 
   if (completing && existing.linkTotal > 0 && existing.linksDelivered < existing.linkTotal) {
+    const noun = existing.category === "AI SEO" ? "mentions" : "links";
     throw new Error(
-      `Can't complete yet — ${existing.linksDelivered} of ${existing.linkTotal} links delivered. Add a publish link to every row first.`
+      `Can't complete yet — ${existing.linksDelivered} of ${existing.linkTotal} ${noun} delivered. Add a publish link to every row first.`
     );
   }
 
