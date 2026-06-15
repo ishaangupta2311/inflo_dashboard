@@ -26,7 +26,7 @@ export function SidebarNav({ staff }: { staff: boolean }) {
     : [
         { label: "Orders", href: "/orders", icon: ShoppingBag, activePrefix: "/orders" },
         { label: "Store", href: "/store", icon: Store, activePrefix: "/store" },
-        { label: "Invoices", href: "/orders#completed", icon: FileText },
+        { label: "Invoices", href: "/invoices", icon: FileText, activePrefix: "/invoices" },
         { label: "Settings", href: "/settings", icon: Settings, activePrefix: "/settings" }
       ];
 
