@@ -72,12 +72,12 @@ export async function DashboardShell({ children }: { children: React.ReactNode }
               ) : null}
 
               <Show when="signed-out">
-                <SignInButton mode="modal">
+                <SignInButton mode="modal" fallbackRedirectUrl="/orders" signUpFallbackRedirectUrl="/orders">
                   <button className="rounded-full border border-line bg-card px-4 py-3 text-sm font-black text-ink transition hover:border-ink">
                     Sign in
                   </button>
                 </SignInButton>
-                <SignUpButton mode="modal">
+                <SignUpButton mode="modal" fallbackRedirectUrl="/orders" signInFallbackRedirectUrl="/orders">
                   <button className="rounded-full bg-ink px-4 py-3 text-sm font-black text-paper transition hover:-translate-y-0.5">
                     Sign up
                   </button>

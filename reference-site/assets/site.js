@@ -35,6 +35,9 @@
     { t: 'About',        href: 'about.html' },
     { t: 'Affiliates',   href: 'affiliates.html' },
   ];
+  const APP_URL = (window.OI_APP_URL || 'https://app.outreachinfluencers.com').replace(/\/+$/, '');
+  const appUrl = (path) => APP_URL + path;
+  const goToApp = (path) => { window.location.href = appUrl(path); };
 
   /* ---------- state ---------- */
   const KEY = 'oi_state_v1';
@@ -109,8 +112,8 @@
               <div style="font-weight:700">${state.name||'Your account'}</div>
               <div class="menu__d">${state.email||''}</div>
             </div>
-            <a class="menu__item" href="#" style="display:block;padding:10px 14px"><span class="menu__t">Dashboard</span></a>
-            <a class="menu__item" href="#" style="display:block;padding:10px 14px"><span class="menu__t">My orders</span></a>
+            <a class="menu__item" href="${appUrl('/orders')}" style="display:block;padding:10px 14px"><span class="menu__t">Dashboard</span></a>
+            <a class="menu__item" href="${appUrl('/orders')}" style="display:block;padding:10px 14px"><span class="menu__t">My orders</span></a>
             <button class="menu__item" id="logoutBtn" style="display:block;width:100%;text-align:left;padding:10px 14px;color:var(--coral-ink)"><span class="menu__t" style="color:inherit">Log out</span></button>
           </div>
         </div>`;
@@ -119,8 +122,8 @@
       slot.innerHTML = `
         <button class="nav__link" id="loginLink" style="font-weight:600">Log in</button>
         <button class="btn btn--primary btn--sm" id="signupLink">Sign up</button>`;
-      document.getElementById('loginLink').addEventListener('click', () => openAuth('login'));
-      document.getElementById('signupLink').addEventListener('click', () => openAuth('signup'));
+      document.getElementById('loginLink').addEventListener('click', () => goToApp('/sign-in'));
+      document.getElementById('signupLink').addEventListener('click', () => goToApp('/sign-up'));
     }
     refreshCartButtons();
   }
@@ -141,7 +144,7 @@
       <a class="btn btn--coral btn--lg btn--block" href="#" style="margin-top:28px" id="mnavCta">Sign up free ${I.arrow}</a>`;
     document.body.appendChild(m);
     document.getElementById('mnavClose').addEventListener('click', closeMnav);
-    document.getElementById('mnavCta').addEventListener('click', (e) => { e.preventDefault(); closeMnav(); state.loggedIn ? openDrawer() : openAuth('signup'); });
+    document.getElementById('mnavCta').addEventListener('click', (e) => { e.preventDefault(); closeMnav(); state.loggedIn ? openDrawer() : goToApp('/sign-up'); });
   }
   function openMnav() { document.getElementById('mnav').classList.add('open'); document.body.style.overflow = 'hidden'; }
   function closeMnav() { document.getElementById('mnav').classList.remove('open'); document.body.style.overflow = ''; }
@@ -189,7 +192,7 @@
         </div>
       </div>`;
     document.body.appendChild(f);
-    document.getElementById('ftrSignup').addEventListener('click', (e) => { e.preventDefault(); state.loggedIn ? openDrawer() : openAuth('signup'); });
+    document.getElementById('ftrSignup').addEventListener('click', (e) => { e.preventDefault(); state.loggedIn ? openDrawer() : goToApp('/sign-up'); });
     document.getElementById('ftrCart').addEventListener('click', (e) => { e.preventDefault(); openDrawer(); });
   }
 
@@ -222,36 +225,7 @@
   }
 
   function openAuth(mode) {
-    const inner = document.getElementById('authInner');
-    const login = mode === 'login';
-    inner.innerHTML = `
-      <div class="eyebrow mb-16">${login ? 'Welcome back' : 'Create your free account'}</div>
-      <h3 style="font-size:1.7rem;margin-bottom:6px">${login ? 'Log in to Outreach Influencers' : 'Start ordering in minutes'}</h3>
-      <p class="muted" style="font-size:.95rem;margin-bottom:22px">${login ? 'Access your dashboard, orders and live reports.' : 'No card required. Get instant access to the full marketplace and live pricing.'}</p>
-      <form id="authForm">
-        ${login ? '' : '<div class="field"><label>Full name</label><input required name="name" placeholder="Alex Rivera" autocomplete="name"></div>'}
-        <div class="field"><label>Work email</label><input required type="email" name="email" placeholder="you@agency.com" autocomplete="email"></div>
-        <div class="field"><label>Password</label><input required type="password" name="password" placeholder="••••••••" autocomplete="${login?'current-password':'new-password'}"></div>
-        <button class="btn btn--coral btn--block btn--lg" type="submit" style="margin-top:6px">${login ? 'Log in' : 'Create account'} ${I.arrow}</button>
-      </form>
-      <div class="center" style="margin-top:18px;font-size:.92rem;color:var(--ink-3)">
-        ${login ? "New here? " : "Already have an account? "}
-        <button id="authSwap" style="color:var(--violet);font-weight:700">${login ? 'Create an account' : 'Log in'}</button>
-      </div>`;
-    document.getElementById('authForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const fd = new FormData(e.target);
-      state.loggedIn = true;
-      state.email = fd.get('email') || 'you@agency.com';
-      state.name = fd.get('name') || (state.email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g, c=>c.toUpperCase())) || 'You';
-      save(); renderAuth(); closeAll();
-      toast(login ? 'Logged in — welcome back!' : 'Account created — welcome aboard!');
-      if (pendingAdd) { const p = pendingAdd; pendingAdd = null; setTimeout(() => addToCart(p, true), 350); }
-    });
-    document.getElementById('authSwap').addEventListener('click', () => openAuth(login ? 'signup' : 'login'));
-    document.getElementById('scrim').classList.add('open');
-    document.getElementById('authModal').classList.add('open');
-    document.body.style.overflow = 'hidden';
+    goToApp(mode === 'login' ? '/sign-in' : '/sign-up');
   }
 
   function logout() { state.loggedIn = false; state.name = ''; state.email = ''; save(); renderAuth(); toast('Logged out'); }
