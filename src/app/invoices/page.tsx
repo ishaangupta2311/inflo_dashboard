@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Download, FileText } from "lucide-react";
+import { DataUnavailableNotice } from "@/components/data-unavailable-notice";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { isStaff } from "@/lib/auth";
 import { listOrders } from "@/lib/order-backend";
@@ -18,7 +19,16 @@ export default async function InvoicesPage() {
     redirect("/admin");
   }
 
-  const orders = await listOrders();
+  let unavailable = false;
+  let orders: Awaited<ReturnType<typeof listOrders>> = [];
+
+  try {
+    orders = await listOrders();
+  } catch (error) {
+    unavailable = true;
+    console.error("[invoices] order data load failed:", error);
+  }
+
   // Payment history = priced orders (a quote still being scoped has no price yet).
   const history = orders.filter((order) => order.quoteStatus !== "requested");
   const totalPaid = history
@@ -27,6 +37,13 @@ export default async function InvoicesPage() {
 
   return (
     <DashboardShell>
+      {unavailable ? (
+        <DataUnavailableNotice
+          title="Invoice data is temporarily unavailable"
+          message="You are signed in, but we could not load your invoices right now. Please try again shortly."
+        />
+      ) : null}
+
       <section className="rounded-3xl border border-line bg-card p-6 shadow-card lg:p-8">
         <div className="flex items-center gap-2">
           <FileText className="size-5 text-violet" />

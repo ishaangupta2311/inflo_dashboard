@@ -1,7 +1,12 @@
 import { createOrder, getDashboardData, parseCreateOrderInput } from "@/lib/order-backend";
 
 export async function GET() {
-  return Response.json(await getDashboardData());
+  try {
+    return Response.json(await getDashboardData());
+  } catch (error) {
+    console.error("[api/orders] dashboard data load failed:", error);
+    return Response.json({ error: "Order data is temporarily unavailable." }, { status: 503 });
+  }
 }
 
 export async function POST(request: Request) {

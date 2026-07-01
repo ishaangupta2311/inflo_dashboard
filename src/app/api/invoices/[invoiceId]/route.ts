@@ -5,7 +5,14 @@ export async function GET(
   { params }: { params: Promise<{ invoiceId: string }> }
 ) {
   const { invoiceId } = await params;
-  const invoice = await getInvoicePdf(invoiceId);
+  let invoice: Awaited<ReturnType<typeof getInvoicePdf>>;
+
+  try {
+    invoice = await getInvoicePdf(invoiceId);
+  } catch (error) {
+    console.error("[api/invoices/:invoiceId] invoice data load failed:", error);
+    return Response.json({ error: "Invoice data is temporarily unavailable." }, { status: 503 });
+  }
 
   if (!invoice) {
     return Response.json({ error: "Invoice not found." }, { status: 404 });

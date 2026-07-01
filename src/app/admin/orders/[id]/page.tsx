@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink, MessageSquarePlus } from "lucide-react";
 import { postUpdateAction } from "@/app/admin/actions";
+import { DataUnavailableNotice } from "@/components/data-unavailable-notice";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { ManageOrderForm } from "@/components/manage-order-form";
 import { OrderLinksTable } from "@/components/order-links-table";
@@ -11,7 +12,21 @@ import { money } from "@/lib/orders";
 
 export default async function AdminOrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const detail = await getAdminOrder(id);
+  let detail: Awaited<ReturnType<typeof getAdminOrder>>;
+
+  try {
+    detail = await getAdminOrder(id);
+  } catch (error) {
+    console.error("[admin] order detail data load failed:", error);
+    return (
+      <DashboardShell>
+        <DataUnavailableNotice
+          title="Admin order data is temporarily unavailable"
+          message="Your staff session is active, but this order could not be loaded right now. Try again shortly."
+        />
+      </DashboardShell>
+    );
+  }
 
   if (!detail) {
     notFound();

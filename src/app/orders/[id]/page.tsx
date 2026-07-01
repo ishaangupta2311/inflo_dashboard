@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowLeft, CheckCircle2, Download, ExternalLink, MessageSquare } from "lucide-react";
 import { acceptQuoteAction } from "@/app/actions";
+import { DataUnavailableNotice } from "@/components/data-unavailable-notice";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { OrderLinksTable } from "@/components/order-links-table";
 import { OrderPrTable } from "@/components/order-pr-table";
@@ -21,7 +22,18 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
     redirect(`/admin/orders/${id}`);
   }
 
-  const detail = await getOrderDetail(id);
+  let detail: Awaited<ReturnType<typeof getOrderDetail>>;
+
+  try {
+    detail = await getOrderDetail(id);
+  } catch (error) {
+    console.error("[orders] order detail data load failed:", error);
+    return (
+      <DashboardShell>
+        <DataUnavailableNotice />
+      </DashboardShell>
+    );
+  }
 
   if (!detail) {
     notFound();

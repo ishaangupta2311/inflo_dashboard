@@ -34,6 +34,13 @@ type DashboardStat = {
   tone: "violet" | "ink" | "coral";
 };
 
+export type DashboardData = {
+  orders: Order[];
+  activeOrders: Order[];
+  completedOrders: Order[];
+  stats: DashboardStat[];
+};
+
 async function requireUserId() {
   const { userId } = await auth();
 
@@ -261,8 +268,7 @@ async function notifyOrderCompleted(row: OrderRow): Promise<void> {
   });
 }
 
-export async function getDashboardData() {
-  const orders = await listOrders();
+function buildDashboardData(orders: Order[]): DashboardData {
   const activeOrders = orders.filter((order) => order.status !== "Completed");
   const completedOrders = orders.filter((order) => order.status === "Completed");
   const averageProgress = activeOrders.length
@@ -296,6 +302,14 @@ export async function getDashboardData() {
     completedOrders,
     stats
   };
+}
+
+export function emptyDashboardData(): DashboardData {
+  return buildDashboardData([]);
+}
+
+export async function getDashboardData(): Promise<DashboardData> {
+  return buildDashboardData(await listOrders());
 }
 
 export async function createOrder(input: CreateOrderInput) {

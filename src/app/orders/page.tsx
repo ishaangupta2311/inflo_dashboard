@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Download, FileText, PackageCheck, Plus, TrendingUp } from "lucide-react";
+import { DataUnavailableNotice } from "@/components/data-unavailable-notice";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { OrderCard } from "@/components/order-card";
 import { isStaff } from "@/lib/auth";
-import { getDashboardData } from "@/lib/order-backend";
+import { emptyDashboardData, getDashboardData } from "@/lib/order-backend";
 import { invoiceHref } from "@/lib/orders";
 
 const statIcons = {
@@ -18,10 +19,22 @@ export default async function OrdersPage() {
     redirect("/admin");
   }
 
-  const { activeOrders, completedOrders, stats } = await getDashboardData();
+  let unavailable = false;
+  let data = emptyDashboardData();
+
+  try {
+    data = await getDashboardData();
+  } catch (error) {
+    unavailable = true;
+    console.error("[orders] dashboard data load failed:", error);
+  }
+
+  const { activeOrders, completedOrders, stats } = data;
 
   return (
     <DashboardShell>
+      {unavailable ? <DataUnavailableNotice /> : null}
+
       <section className="grid gap-4 md:grid-cols-3">
         {stats.map((stat) => {
           const Icon = statIcons[stat.tone];

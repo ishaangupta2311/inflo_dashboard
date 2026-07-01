@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, Inbox } from "lucide-react";
+import { DataUnavailableNotice } from "@/components/data-unavailable-notice";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { listAllOrders } from "@/lib/order-backend";
 import { money, type OrderStatus } from "@/lib/orders";
@@ -17,7 +18,15 @@ export default async function AdminPage({
   searchParams: Promise<{ status?: string }>;
 }) {
   const { status } = await searchParams;
-  const orders = await listAllOrders();
+  let unavailable = false;
+  let orders: Awaited<ReturnType<typeof listAllOrders>> = [];
+
+  try {
+    orders = await listAllOrders();
+  } catch (error) {
+    unavailable = true;
+    console.error("[admin] order data load failed:", error);
+  }
 
   const activeFilter: "All" | OrderStatus =
     status && (STATUS_FILTERS as string[]).includes(status) ? (status as OrderStatus) : "All";
@@ -31,6 +40,13 @@ export default async function AdminPage({
 
   return (
     <DashboardShell>
+      {unavailable ? (
+        <DataUnavailableNotice
+          title="Admin order data is temporarily unavailable"
+          message="Your staff session is active, but the order database could not be reached. Try again shortly."
+        />
+      ) : null}
+
       <section className="grid gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-line bg-card p-5 shadow-card">
           <p className="font-mono text-xs font-bold uppercase tracking-[0.16em] text-muted">Open orders</p>
