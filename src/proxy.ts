@@ -7,6 +7,9 @@ export default clerkMiddleware(async (auth, request) => {
   if (!isPublicRoute(request)) {
     await auth.protect();
   }
+}, {
+  signInUrl: "/sign-in",
+  signUpUrl: "/sign-up",
 });
 
 // Admin authorization is enforced in src/app/admin/layout.tsx (page gate) and
