@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SignInButton, SignUpButton, Show, UserButton } from "@clerk/nextjs";
+import { currentUser } from "@clerk/nextjs/server";
 import { LayoutDashboard, Plus } from "lucide-react";
 import { CartButton } from "@/components/cart-button";
 import { NotificationsBell } from "@/components/notifications-bell";
@@ -9,6 +10,8 @@ import { listRecentUpdatesForStaff, listRecentUpdatesForUser } from "@/lib/order
 
 export async function DashboardShell({ children }: { children: React.ReactNode }) {
   const staff = await isStaff();
+  const user = await currentUser();
+  const greetingName = user?.firstName?.trim();
   // Clients are notified of staff changes to their orders; staff are notified of
   // client changes across all orders.
   const updates = staff
@@ -48,7 +51,7 @@ export async function DashboardShell({ children }: { children: React.ReactNode }
           <div className="flex min-h-20 items-center justify-between gap-4 px-4 sm:px-6 lg:px-10">
             <div>
               <h1 className="font-display text-2xl font-black tracking-tight sm:text-3xl">
-                {staff ? "Operations dashboard" : "Client dashboard"}
+                {greetingName ? `Hi, ${greetingName}` : "Hi there"}
               </h1>
             </div>
 
