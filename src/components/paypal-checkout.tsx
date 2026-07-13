@@ -95,7 +95,7 @@ export function PaypalCheckout({
         const res = await fetch("/api/paypal/create-order", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lines: dataRef.current.lines })
+          body: JSON.stringify({ lines: dataRef.current.lines, brief: dataRef.current.brief })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Could not start checkout.");
@@ -105,11 +105,7 @@ export function PaypalCheckout({
         const res = await fetch("/api/paypal/capture", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            paypalOrderId: approval.orderID,
-            lines: dataRef.current.lines,
-            brief: dataRef.current.brief
-          })
+          body: JSON.stringify({ paypalOrderId: approval.orderID })
         });
         const data = await res.json();
         if (!res.ok) {

@@ -11,43 +11,67 @@ datasource db {
 }
 
 model Order {
-  id           String   @id @default(cuid())
-  userId       String
-  userEmail    String?
-  service      String
-  category     String
-  packageId    String?
-  packageName  String?
-  billing      String   @default("one_time") // "one_time" | "monthly"
-  quoteStatus  String? // null for fixed-price buys; "requested" | "quoted" | "accepted" for quote items
-  status       String   @default("In Progress")
+  id             String    @id @default(cuid())
+  userId         String
+  userEmail      String?
+  service        String
+  category       String
+  packageId      String?
+  packageName    String?
+  billing        String    @default("one_time") // "one_time" | "monthly"
+  quoteStatus    String? // null for fixed-price buys; "requested" | "quoted" | "accepted" for quote items
+  status         String    @default("In Progress")
   // Payment (delivery status above is separate from whether the order is paid).
-  paymentStatus String  @default("unpaid") // "unpaid" | "paid"
-  paidAt        DateTime?
-  paymentRef    String? // PayPal order id — also the idempotency key for capture
-  orderedAt    DateTime @default(now())
-  dueAt        DateTime
-  completedAt  DateTime?
-  amount       Int
-  progress     Int      @default(12)
-  linkTotal      Int    @default(0) // total links ordered (Link Building); 0 for non-link orders
-  linksDelivered Int    @default(0) // links with a publish URL — denormalized for cheap listing
-  prTotal        Int    @default(0) // total PR features ordered (Digital PR); 0 for non-PR orders
-  prDelivered    Int    @default(0) // features with a publish date — denormalized for cheap listing
-  targetUrl    String
-  deliverables String[]
-  owner        String   @default("Client Success")
-  invoiceId    String?  @unique
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  paymentStatus  String    @default("unpaid") // "unpaid" | "paid"
+  paidAt         DateTime?
+  paymentRef     String? // PayPal order id — also the idempotency key for capture
+  orderedAt      DateTime  @default(now())
+  dueAt          DateTime
+  completedAt    DateTime?
+  amount         Int
+  progress       Int       @default(12)
+  linkTotal      Int       @default(0) // total links ordered (Link Building); 0 for non-link orders
+  linksDelivered Int       @default(0) // links with a publish URL — denormalized for cheap listing
+  prTotal        Int       @default(0) // total PR features ordered (Digital PR); 0 for non-PR orders
+  prDelivered    Int       @default(0) // features with a publish date — denormalized for cheap listing
+  targetUrl      String
+  deliverables   String[]
+  owner          String    @default("Client Success")
+  invoiceId      String?   @unique
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  updates      OrderUpdate[]
-  links        OrderLink[]
-  prItems      OrderPrItem[]
+  updates OrderUpdate[]
+  links   OrderLink[]
+  prItems OrderPrItem[]
 
   @@index([userId])
   @@index([paymentRef])
   @@map("orders")
+}
+
+// Durable state for PayPal checkout recovery. The browser callback and PayPal
+// webhook both finalize this record, so a successful capture cannot be lost if
+// the client disconnects before local order creation finishes.
+model PayPalCheckout {
+  id             String    @id @default(cuid())
+  userId         String
+  userEmail      String?
+  lines          Json
+  brief          String?
+  expectedAmount Int
+  currency       String    @default("USD")
+  paypalOrderId  String?   @unique
+  captureId      String?   @unique
+  status         String    @default("pending")
+  paidAt         DateTime?
+  lastEventType  String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("paypal_checkouts")
 }
 
 // One row per individual link in a Link Building order. Clients edit anchor text
@@ -56,8 +80,8 @@ model OrderLink {
   id          String   @id @default(cuid())
   orderId     String
   order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  position    Int      // Sno. (1-based)
-  orderedDr   String   // DR tier ordered, e.g. "DR 30+" (read-only to client)
+  position    Int // Sno. (1-based)
+  orderedDr   String // DR tier ordered, e.g. "DR 30+" (read-only to client)
   anchorText  String   @default("") // client-editable
   landingPage String   @default("") // client-editable
   prospectUrl String   @default("") // admin-only
@@ -78,7 +102,7 @@ model OrderPrItem {
   id          String   @id @default(cuid())
   orderId     String
   order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  position    Int      // S.No (1-based)
+  position    Int // S.No (1-based)
   title       String   @default("") // press release / feature title
   docUrl      String   @default("") // PR doclink
   publishDate String   @default("") // publish date (YYYY-MM-DD); non-empty ⇒ published
@@ -108,18 +132,18 @@ model OrderUpdate {
 // Orders reference userId as a plain string (no FK) because webhook delivery is
 // eventually consistent — an order can be created before this row exists.
 model User {
-  id        String   @id // Clerk user id
-  email     String?
-  firstName String?
-  lastName  String?
-  imageUrl  String?
+  id             String   @id // Clerk user id
+  email          String?
+  firstName      String?
+  lastName       String?
+  imageUrl       String?
   // Client-managed billing details, rendered on invoices. The Clerk webhook only
   // writes email/name/image, so it never clobbers these.
   companyName    String? // company / legal name
   billingAddress String? // multi-line billing address
   taxId          String? // Tax / VAT / GST ID
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@map("users")
 }

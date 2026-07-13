@@ -9,12 +9,14 @@
 //   PAYPAL_ENV                  "sandbox" (default) | "live"
 //   NEXT_PUBLIC_PAYPAL_CLIENT_ID   the public client id (loaded by the browser SDK)
 //   PAYPAL_CLIENT_SECRET           the secret (server only — never exposed)
+//   PAYPAL_WEBHOOK_ID               id of this app's configured webhook URL
 
 // The server needs the client id too (for the OAuth Basic credential). Accept it
 // from a server-only var if set, otherwise reuse the public one — they're the
 // same value, so a single NEXT_PUBLIC_PAYPAL_CLIENT_ID is enough.
 const CLIENT_ID = process.env.PAYPAL_CLIENT_ID ?? process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID ?? "";
 const CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET ?? "";
+const WEBHOOK_ID = process.env.PAYPAL_WEBHOOK_ID ?? "";
 
 export function paypalEnv(): "live" | "sandbox" {
   return (process.env.PAYPAL_ENV ?? "sandbox").trim().toLowerCase() === "live" ? "live" : "sandbox";
@@ -26,6 +28,10 @@ const API_BASE =
 /** True once both credentials are present — gates the entire PayPal flow. */
 export function isPaypalConfigured(): boolean {
   return Boolean(CLIENT_ID && CLIENT_SECRET);
+}
+
+export function isPaypalWebhookConfigured(): boolean {
+  return isPaypalConfigured() && Boolean(WEBHOOK_ID);
 }
 
 // Cache the OAuth token in module memory until shortly before it expires so we
@@ -102,6 +108,11 @@ export type CaptureResult = {
   alreadyCaptured?: boolean; // a duplicate onApprove for an already-captured order
 };
 
+export type PaypalOrderDetails = CaptureResult & {
+  id: string;
+  customId?: string;
+};
+
 /** Capture (collect) the money for a previously-approved PayPal order. */
 export async function capturePaypalOrder(paypalOrderId: string): Promise<CaptureResult> {
   const token = await accessToken();
@@ -130,4 +141,83 @@ export async function capturePaypalOrder(paypalOrderId: string): Promise<Capture
     currency: capture?.amount?.currency_code,
     payerEmail: data?.payer?.email_address
   };
+}
+
+/** Load the authoritative state of an order, including its local checkout id. */
+export async function getPaypalOrder(paypalOrderId: string): Promise<PaypalOrderDetails> {
+  const token = await accessToken();
+  const res = await fetch(`${API_BASE}/v2/checkout/orders/${encodeURIComponent(paypalOrderId)}`, {
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    cache: "no-store"
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(`PayPal show-order failed (${res.status}): ${JSON.stringify(data)}`);
+  }
+
+  const unit = data?.purchase_units?.[0];
+  const capture = unit?.payments?.captures?.[0];
+  return {
+    id: data.id as string,
+    status: data.status as string,
+    customId: unit?.custom_id,
+    captureId: capture?.id,
+    capturedValue: capture?.amount?.value,
+    currency: capture?.amount?.currency_code,
+    payerEmail: data?.payer?.email_address
+  };
+}
+
+/** Reconcile full versus partial refunds from the current capture state. */
+export async function getPaypalCaptureStatus(captureId: string): Promise<string> {
+  const token = await accessToken();
+  const res = await fetch(`${API_BASE}/v2/payments/captures/${encodeURIComponent(captureId)}`, {
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    cache: "no-store"
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(`PayPal show-capture failed (${res.status}): ${JSON.stringify(data)}`);
+  }
+  return String(data?.status ?? "");
+}
+
+export type PaypalTransmissionHeaders = {
+  transmissionId: string;
+  transmissionTime: string;
+  certUrl: string;
+  authAlgo: string;
+  transmissionSig: string;
+};
+
+/** Verify a webhook by posting its transmission data back to PayPal. */
+export async function verifyPaypalWebhookSignature(
+  headers: PaypalTransmissionHeaders,
+  webhookEvent: Record<string, unknown>
+): Promise<boolean> {
+  if (!isPaypalWebhookConfigured()) {
+    throw new Error("PayPal webhook is not configured.");
+  }
+
+  const token = await accessToken();
+  const res = await fetch(`${API_BASE}/v1/notifications/verify-webhook-signature`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    cache: "no-store",
+    body: JSON.stringify({
+      transmission_id: headers.transmissionId,
+      transmission_time: headers.transmissionTime,
+      cert_url: headers.certUrl,
+      auth_algo: headers.authAlgo,
+      transmission_sig: headers.transmissionSig,
+      webhook_id: WEBHOOK_ID,
+      webhook_event: webhookEvent
+    })
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(`PayPal webhook verification failed (${res.status}): ${JSON.stringify(data)}`);
+  }
+  return data?.verification_status === "SUCCESS";
 }

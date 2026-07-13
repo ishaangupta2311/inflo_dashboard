@@ -1,6 +1,7 @@
-import { auth } from "@clerk/nextjs/server";
-import { createPaypalOrder, isPaypalConfigured } from "@/lib/paypal";
-import { priceCart, type CartLine } from "@/lib/order-backend";
+import { auth, currentUser } from "@clerk/nextjs/server";
+import { isPaypalConfigured } from "@/lib/paypal";
+import { preparePaypalCheckout } from "@/lib/paypal-checkout-backend";
+import type { CartLine } from "@/lib/order-backend";
 
 // Step 1 of PayPal checkout: the browser SDK's createOrder callback hits this.
 // We price the cart server-side (never trusting a client amount) and open a
@@ -15,18 +16,19 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = (await req.json()) as { lines?: CartLine[] };
+    const body = (await req.json()) as { lines?: CartLine[]; brief?: string };
     const lines = Array.isArray(body.lines) ? body.lines : [];
-    const { amount, description } = priceCart(lines);
-
-    const order = await createPaypalOrder({
-      amountValue: amount.toFixed(2),
-      currency: "USD",
-      description,
-      customId: userId
+    const user = await currentUser();
+    const userEmail =
+      user?.primaryEmailAddress?.emailAddress ?? user?.emailAddresses?.[0]?.emailAddress;
+    const checkout = await preparePaypalCheckout({
+      userId,
+      userEmail,
+      lines,
+      brief: body.brief
     });
 
-    return Response.json({ id: order.id });
+    return Response.json({ id: checkout.paypalOrderId });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not start checkout.";
     console.error("[paypal] create-order:", message);

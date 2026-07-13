@@ -79,8 +79,9 @@
       <ol>
         <li>Read the event and PayPal transmission headers.</li>
         <li>Post the event and configured webhook ID to PayPal's signature-verification endpoint.</li>
+        <li>For <code>CHECKOUT.ORDER.APPROVED</code>, capture and finalize the persisted checkout so closing the browser after approval cannot strand the payment.</li>
         <li>For <code>PAYMENT.CAPTURE.COMPLETED</code>, resolve the PayPal order ID, validate amount/currency, and finalize.</li>
-        <li>For denied and refunded captures, update the checkout state. Approved orders record the approved state.</li>
+        <li>For denied and refunded captures, update the checkout state. Refund reconciliation distinguishes partial from full refunds.</li>
         <li>Return a successful response for supported, verified duplicate events.</li>
       </ol>
     </div>
@@ -91,10 +92,10 @@
     <table>
       <thead><tr><th>PayPal event</th><th>Application action</th></tr></thead>
       <tbody>
-        <tr><td><code>CHECKOUT.ORDER.APPROVED</code></td><td>Mark the persisted checkout approved when it has not already advanced.</td></tr>
+        <tr><td><code>CHECKOUT.ORDER.APPROVED</code></td><td>Capture and finalize the persisted checkout idempotently.</td></tr>
         <tr><td><code>PAYMENT.CAPTURE.COMPLETED</code></td><td>Validate amount and currency, then finalize paid orders idempotently.</td></tr>
         <tr><td><code>PAYMENT.CAPTURE.DENIED</code></td><td>Mark the checkout denied; do not create orders.</td></tr>
-        <tr><td><code>PAYMENT.CAPTURE.REFUNDED</code></td><td>Mark the checkout refunded and mark linked orders refunded.</td></tr>
+        <tr><td><code>PAYMENT.CAPTURE.REFUNDED</code></td><td>Fetch the capture state and mark linked orders partially or fully refunded.</td></tr>
       </tbody>
     </table>
   </section>

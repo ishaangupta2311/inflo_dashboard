@@ -92,6 +92,16 @@ export default async function InvoicesPage() {
                             Paid
                           </span>
                         ) : null}
+                        {order.paymentStatus === "refunded" ? (
+                          <span className="rounded-full bg-coral/20 px-3 py-1 text-xs font-black text-coral">
+                            Refunded
+                          </span>
+                        ) : null}
+                        {order.paymentStatus === "partially_refunded" ? (
+                          <span className="rounded-full bg-coral/20 px-3 py-1 text-xs font-black text-coral">
+                            Partially refunded
+                          </span>
+                        ) : null}
                       </div>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right font-black">{money(order.amount)}</td>

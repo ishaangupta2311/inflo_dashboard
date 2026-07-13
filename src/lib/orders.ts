@@ -21,7 +21,7 @@ export type Order = {
   owner: string;
   invoiceId?: string;
   quoteStatus?: string;
-  paymentStatus?: "unpaid" | "paid";
+  paymentStatus?: "unpaid" | "paid" | "partially_refunded" | "refunded";
   paidAt?: string;
 };
 

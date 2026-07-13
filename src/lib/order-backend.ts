@@ -70,7 +70,12 @@ function toOrder(row: OrderRow): Order {
     owner: row.owner,
     invoiceId: row.invoiceId ?? undefined,
     quoteStatus: row.quoteStatus ?? undefined,
-    paymentStatus: row.paymentStatus === "paid" ? "paid" : "unpaid",
+    paymentStatus:
+      row.paymentStatus === "paid" ||
+      row.paymentStatus === "partially_refunded" ||
+      row.paymentStatus === "refunded"
+        ? row.paymentStatus
+        : "unpaid",
     paidAt: row.paidAt ? formatDate(row.paidAt) : undefined
   };
 }
@@ -194,13 +199,25 @@ async function buildInvoicePdf(row: OrderRow): Promise<Uint8Array> {
 
   // Meta (right column)
   const issued = row.completedAt ?? row.paidAt ?? new Date();
-  const paid = row.paymentStatus === "paid";
+  const paid =
+    row.paymentStatus === "paid" ||
+    row.paymentStatus === "partially_refunded" ||
+    row.paymentStatus === "refunded";
   const meta: [string, string][] = [
     ["Invoice", row.invoiceId ?? "—"],
     ["Order", row.id],
     ["Issued", formatDate(issued)],
     ["Status", row.status],
-    ["Payment", paid ? `Paid${row.paidAt ? ` · ${formatDate(row.paidAt)}` : ""}` : "Due"]
+    [
+      "Payment",
+      row.paymentStatus === "refunded"
+        ? "Refunded"
+        : row.paymentStatus === "partially_refunded"
+          ? "Partially refunded"
+        : paid
+          ? `Paid${row.paidAt ? ` · ${formatDate(row.paidAt)}` : ""}`
+          : "Due"
+    ]
   ];
   let my = 612;
   for (const [label, value] of meta) {
@@ -394,6 +411,18 @@ export async function createOrdersFromCart(input: CheckoutInput) {
   noStore();
   const userId = await requireUserId();
   const email = await currentUserEmail();
+  return createOrdersFromCartForUser(input, { userId, email });
+}
+
+// Server-authenticated variant used by verified payment webhooks, which do not
+// have a Clerk browser session. Callers must derive this identity from a
+// persisted checkout rather than from the webhook payload.
+export async function createOrdersFromCartForUser(
+  input: CheckoutInput,
+  identity: { userId: string; email?: string | null }
+) {
+  noStore();
+  const { userId, email } = identity;
   // Target URL is no longer collected at checkout — link orders capture the
   // landing page per placement, and other orders use the brief.
   const targetUrl = input.targetUrl?.trim() ?? "";
