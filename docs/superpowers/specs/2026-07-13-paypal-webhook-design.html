@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PayPal Webhook and Checkout Recovery Design</title>
+  <style>
+    :root { color-scheme: light; --ink: #17211b; --muted: #5c6861; --paper: #f6f3e9; --card: #fffdf7; --line: #d8d8ca; --accent: #246b45; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font: 16px/1.55 Georgia, "Times New Roman", serif; }
+    main { width: min(920px, calc(100% - 32px)); margin: 48px auto; }
+    header { border-bottom: 4px solid var(--accent); padding-bottom: 24px; }
+    h1, h2, h3 { line-height: 1.15; }
+    h1 { font-size: clamp(2rem, 5vw, 3.5rem); margin: 0 0 12px; }
+    h2 { margin-top: 40px; }
+    p, li { max-width: 76ch; }
+    .meta, .note { color: var(--muted); }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; margin: 20px 0; padding: 20px 24px; }
+    code { background: #e9ece5; border-radius: 4px; padding: 2px 5px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .9em; }
+    table { width: 100%; border-collapse: collapse; background: var(--card); }
+    th, td { border: 1px solid var(--line); padding: 10px 12px; text-align: left; vertical-align: top; }
+    th { background: #e9ece5; }
+    .flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 20px 0; }
+    .flow div { background: var(--card); border: 1px solid var(--line); border-top: 4px solid var(--accent); border-radius: 8px; padding: 16px; }
+    @media (max-width: 700px) { main { margin: 24px auto; } .flow { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="meta">Approved design &middot; 13 July 2026</p>
+    <h1>PayPal Webhook and Checkout Recovery</h1>
+    <p>Make PayPal checkout recoverable when payment succeeds but the browser callback or subsequent database work fails.</p>
+  </header>
+
+  <section>
+    <h2>Outcome</h2>
+    <p>The application will persist an authenticated checkout before creating a PayPal order. Either the browser capture callback or a verified PayPal webhook can then finalize that checkout exactly once. The server remains authoritative for cart pricing and order creation.</p>
+  </section>
+
+  <section>
+    <h2>Architecture</h2>
+    <div class="flow">
+      <div><strong>1. Prepare</strong><br>Persist user, cart, brief, amount, and currency before calling PayPal.</div>
+      <div><strong>2. Capture</strong><br>Use the stored checkout for browser-triggered capture and amount verification.</div>
+      <div><strong>3. Reconcile</strong><br>Verify webhook signatures and finalize the same checkout after completed captures.</div>
+    </div>
+
+    <h3>Persistent checkout</h3>
+    <p>Add a <code>PayPalCheckout</code> model with a generated local ID, user ID, serialized cart lines, brief, expected amount, currency, unique PayPal order ID, optional capture ID, state, paid timestamp, last event type, and timestamps. States are string values: <code>pending</code>, <code>approved</code>, <code>paid</code>, <code>denied</code>, <code>refunded</code>, and <code>failed</code>.</p>
+    <p>The PayPal order's <code>custom_id</code> will contain the local checkout ID. The normal lookup uses the unique PayPal order ID; <code>custom_id</code> provides a recovery link if PayPal order creation succeeds but saving its ID locally fails.</p>
+
+    <h3>Shared finalization</h3>
+    <p>A server-only finalizer will load the persisted checkout, validate the captured USD amount, and call the existing idempotent order creation path using the PayPal order ID as the payment reference. Browser and webhook handlers will both use this function. A previously paid checkout returns success without creating new orders or sending duplicate email.</p>
+  </section>
+
+  <section>
+    <h2>Request Flows</h2>
+    <div class="card">
+      <h3>Create order</h3>
+      <ol>
+        <li>Require Clerk authentication and validate/price cart lines on the server.</li>
+        <li>Create a pending checkout record with the authoritative amount.</li>
+        <li>Create the PayPal order with the local checkout ID in <code>custom_id</code>.</li>
+        <li>Save the PayPal order ID and return it to the browser.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3>Browser capture</h3>
+      <ol>
+        <li>Require Clerk authentication and load the checkout by PayPal order ID and user ID.</li>
+        <li>Capture through PayPal, then validate status, currency, and amount.</li>
+        <li>Finalize from persisted cart data and return the created order count.</li>
+      </ol>
+      <p class="note">The browser will no longer resubmit cart lines or the brief during capture.</p>
+    </div>
+    <div class="card">
+      <h3>Webhook</h3>
+      <ol>
+        <li>Read the event and PayPal transmission headers.</li>
+        <li>Post the event and configured webhook ID to PayPal's signature-verification endpoint.</li>
+        <li>For <code>PAYMENT.CAPTURE.COMPLETED</code>, resolve the PayPal order ID, validate amount/currency, and finalize.</li>
+        <li>For denied and refunded captures, update the checkout state. Approved orders record the approved state.</li>
+        <li>Return a successful response for supported, verified duplicate events.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section>
+    <h2>Event Contract</h2>
+    <table>
+      <thead><tr><th>PayPal event</th><th>Application action</th></tr></thead>
+      <tbody>
+        <tr><td><code>CHECKOUT.ORDER.APPROVED</code></td><td>Mark the persisted checkout approved when it has not already advanced.</td></tr>
+        <tr><td><code>PAYMENT.CAPTURE.COMPLETED</code></td><td>Validate amount and currency, then finalize paid orders idempotently.</td></tr>
+        <tr><td><code>PAYMENT.CAPTURE.DENIED</code></td><td>Mark the checkout denied; do not create orders.</td></tr>
+        <tr><td><code>PAYMENT.CAPTURE.REFUNDED</code></td><td>Mark the checkout refunded and mark linked orders refunded.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Security and Failure Handling</h2>
+    <ul>
+      <li>Require <code>PAYPAL_WEBHOOK_ID</code>; never accept an unverified webhook.</li>
+      <li>Use PayPal OAuth and signature verification against the same sandbox/live environment as checkout.</li>
+      <li>Reject missing or invalid verification headers with <code>401</code>.</li>
+      <li>Return <code>500</code> for temporary processing failures so PayPal retries delivery.</li>
+      <li>Return <code>200</code> for verified irrelevant or already-processed events.</li>
+      <li>Never trust client-submitted prices, ownership, payment state, or webhook event names without verification.</li>
+      <li>Log event IDs and PayPal order IDs, but not credentials or complete sensitive payloads.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Configuration and Migration</h2>
+    <p>Add <code>PAYPAL_WEBHOOK_ID</code> to <code>.env.example</code> and the Vercel Production environment. Apply the Prisma migration that creates the checkout table before deploying application code that writes to it.</p>
+  </section>
+
+  <section>
+    <h2>Verification</h2>
+    <ul>
+      <li>Valid completed capture creates paid orders from the persisted cart.</li>
+      <li>Repeated callback and webhook delivery create no duplicate orders or emails.</li>
+      <li>Webhook recovery succeeds when the browser callback is absent.</li>
+      <li>Invalid signatures and missing headers cannot change payment state.</li>
+      <li>Captured amount or currency mismatch does not create orders and is logged for investigation.</li>
+      <li>Denied and refunded captures update state without creating new orders.</li>
+      <li>Existing non-PayPal checkout behavior remains unchanged when PayPal is not configured.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Deployment Order</h2>
+    <ol>
+      <li>Apply the database migration.</li>
+      <li>Add <code>PAYPAL_WEBHOOK_ID</code> in Vercel alongside the existing PayPal credentials.</li>
+      <li>Deploy the application route at <code>/api/paypal/webhook</code>.</li>
+      <li>Register <code>https://app.influenceroutreachsolutions.com/api/paypal/webhook</code> in the matching PayPal Live app.</li>
+      <li>Run one sandbox end-to-end payment and resend its event to verify idempotency.</li>
+    </ol>
+  </section>
+</main>
+</body>
+</html>
