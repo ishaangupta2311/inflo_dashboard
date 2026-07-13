@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { SignInButton, SignUpButton, Show, UserButton } from "@clerk/nextjs";
 import { currentUser } from "@clerk/nextjs/server";
 import { LayoutDashboard, Plus } from "lucide-react";
@@ -22,13 +23,14 @@ export async function DashboardShell({ children }: { children: React.ReactNode }
     <div className="min-h-screen bg-paper text-ink">
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-72 border-r border-line bg-card/80 px-5 py-6 backdrop-blur-xl lg:block">
         <Link href={staff ? "/admin" : "/orders"} className="flex items-center gap-3">
-          <span className="grid size-10 -rotate-6 place-items-center rounded-xl bg-ink font-display text-lg font-black text-lime">
-            IO
-          </span>
-          <span className="font-display text-xl font-black tracking-tight">
-            Influencer
-            <span className="text-violet">Outreach</span>
-          </span>
+          <Image
+            src="/brand/outreach-influencers-black.png"
+            alt="Outreach Influencers"
+            width={640}
+            height={123}
+            className="h-auto w-52"
+            priority
+          />
         </Link>
 
         <SidebarNav staff={staff} />
