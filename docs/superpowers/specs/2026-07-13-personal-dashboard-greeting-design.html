@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Personal Dashboard Greeting</title>
+    <style>
+      body { margin: 0; background: #faf6ee; color: #14131a; font: 16px/1.55 system-ui, sans-serif; }
+      main { max-width: 760px; margin: 48px auto; padding: 32px; background: #fff; border: 1px solid #e5dcc9; border-radius: 18px; }
+      h1 { margin: 0 0 8px; font-size: 28px; }
+      h2 { margin-top: 28px; font-size: 18px; }
+      code { padding: 2px 6px; background: #f0ece4; border-radius: 5px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Personal Dashboard Greeting</h1>
+      <p>Replace the shared dashboard header label with a signed-in user greeting.</p>
+      <h2>Behavior</h2>
+      <p>The header displays <code>Hi, {firstName}</code> for every signed-in user, including staff. If Clerk does not provide a usable first name, it displays <code>Hi there</code>.</p>
+      <h2>Data Source</h2>
+      <p>Read the current user from Clerk on the existing server-rendered dashboard shell. No database change or client-side fetch is required.</p>
+      <h2>Scope</h2>
+      <p>Only the header title changes. Staff navigation, permissions, notifications, and client-facing page behavior remain unchanged.</p>
+    </main>
+  </body>
+</html>
