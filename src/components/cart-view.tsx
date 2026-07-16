@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, BadgePercent, Lock, Minus, Plus, ShoppingCart, Target, Trash2 } from "lucide-react";
@@ -30,6 +30,7 @@ export function CartView() {
   const [discount, setDiscount] = useState<DiscountPreview | null>(null);
   const [discountError, setDiscountError] = useState<string | null>(null);
   const [applyingDiscount, setApplyingDiscount] = useState(false);
+  const discountRequestRef = useRef(0);
   const [pending, startTransition] = useTransition();
   const paymentsOn = Boolean(PAYPAL_CLIENT_ID);
 
@@ -45,6 +46,13 @@ export function CartView() {
   const total = currentDiscount ? currentDiscount.amount : subtotal;
   const savings = currentDiscount ? subtotal - currentDiscount.amount : 0;
 
+  // Any cart/code edit invalidates an outstanding validation response. Without
+  // this, a slow response could reapply a code for an older cart.
+  const invalidateDiscountRequest = () => {
+    discountRequestRef.current += 1;
+    setApplyingDiscount(false);
+  };
+
   const applyDiscount = async () => {
     if (!normalizedInputCode) {
       setDiscount(null);
@@ -52,13 +60,16 @@ export function CartView() {
       return;
     }
 
+    const requestId = ++discountRequestRef.current;
+    const requestedCode = normalizedInputCode;
+    const requestedSignature = cartSignature;
     setApplyingDiscount(true);
     setDiscountError(null);
     try {
       const res = await fetch("/api/discounts/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lines: items, discountCode: normalizedInputCode })
+        body: JSON.stringify({ lines: items, discountCode: requestedCode })
       });
       const data = (await res.json()) as {
         amount?: number;
@@ -68,13 +79,15 @@ export function CartView() {
       if (!res.ok || !data.discount || typeof data.amount !== "number") {
         throw new Error(data.error || "Could not apply discount code.");
       }
+      if (discountRequestRef.current !== requestId) return;
       setDiscountCode(data.discount.code);
-      setDiscount({ ...data.discount, amount: data.amount, cartSignature });
+      setDiscount({ ...data.discount, amount: data.amount, cartSignature: requestedSignature });
     } catch (applyError) {
+      if (discountRequestRef.current !== requestId) return;
       setDiscount(null);
       setDiscountError(applyError instanceof Error ? applyError.message : "Could not apply discount code.");
     } finally {
-      setApplyingDiscount(false);
+      if (discountRequestRef.current === requestId) setApplyingDiscount(false);
     }
   };
 
@@ -148,7 +161,10 @@ export function CartView() {
                 <button
                   type="button"
                   aria-label="Decrease quantity"
-                  onClick={() => setQuantity(item.id, item.quantity - 1)}
+                  onClick={() => {
+                    invalidateDiscountRequest();
+                    setQuantity(item.id, item.quantity - 1);
+                  }}
                   className="grid size-9 place-items-center rounded-full text-muted transition hover:text-ink"
                 >
                   <Minus className="size-4" />
@@ -157,7 +173,10 @@ export function CartView() {
                 <button
                   type="button"
                   aria-label="Increase quantity"
-                  onClick={() => setQuantity(item.id, item.quantity + 1)}
+                  onClick={() => {
+                    invalidateDiscountRequest();
+                    setQuantity(item.id, item.quantity + 1);
+                  }}
                   className="grid size-9 place-items-center rounded-full text-muted transition hover:text-ink"
                 >
                   <Plus className="size-4" />
@@ -171,7 +190,10 @@ export function CartView() {
               <button
                 type="button"
                 aria-label="Remove item"
-                onClick={() => remove(item.id)}
+                onClick={() => {
+                  invalidateDiscountRequest();
+                  remove(item.id);
+                }}
                 className="grid size-9 place-items-center rounded-full text-muted transition hover:bg-coral-soft hover:text-coral-ink"
               >
                 <Trash2 className="size-4" />
@@ -222,6 +244,7 @@ export function CartView() {
               <input
                 value={discountCode}
                 onChange={(event) => {
+                  invalidateDiscountRequest();
                   setDiscountCode(event.target.value.toUpperCase());
                   setDiscountError(null);
                 }}

@@ -64,6 +64,9 @@ model PayPalCheckout {
   lines          Json
   brief          String?
   expectedAmount Decimal   @db.Decimal(10, 2)
+  capturedAmount Decimal?  @db.Decimal(10, 2)
+  // Null means a legacy partial refund whose cumulative amount is not known yet.
+  refundedAmount Decimal?  @default(0) @db.Decimal(10, 2)
   currency       String    @default("USD")
   discountCode String?
   discountPercentage Int?
@@ -77,6 +80,7 @@ model PayPalCheckout {
 
   @@index([userId])
   @@index([status])
+  @@index([capturedAmount])
   @@map("paypal_checkouts")
 }
 
@@ -92,6 +96,17 @@ model DiscountCode {
   updatedAt  DateTime @updatedAt
 
   @@map("discount_codes")
+}
+
+// Database-backed throttling survives serverless instance churn and prevents
+// authenticated callers from enumerating short, human-readable promo codes.
+model DiscountValidationLimit {
+  key             String   @id
+  windowStartedAt DateTime @default(now())
+  attempts        Int      @default(1)
+  updatedAt       DateTime @updatedAt
+
+  @@map("discount_validation_limits")
 }
 
 // One row per individual link in a Link Building order. Clients edit anchor text

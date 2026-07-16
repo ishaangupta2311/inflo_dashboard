@@ -10,13 +10,17 @@ import { money } from "@/lib/orders";
 const paymentTone = {
   paid: "bg-lime text-lime-ink",
   partially_refunded: "bg-coral/20 text-coral-ink",
-  refunded: "bg-paper-2 text-muted"
+  refunded: "bg-paper-2 text-muted",
+  processing: "bg-violet-soft text-violet-ink",
+  reconciliation_required: "bg-coral text-white"
 };
 
 const paymentLabel = {
   paid: "Paid",
   partially_refunded: "Partially refunded",
-  refunded: "Refunded"
+  refunded: "Refunded",
+  processing: "Processing",
+  reconciliation_required: "Reconcile"
 };
 
 export default async function PaymentsPage() {
@@ -33,8 +37,13 @@ export default async function PaymentsPage() {
     console.error("[admin] payment data load failed:", error);
   }
 
-  const capturedTotal = payments.reduce((sum, payment) => sum + payment.amount, 0);
-  const paidCount = payments.filter((payment) => payment.status === "paid").length;
+  const capturedTotal = payments.reduce((sum, payment) => sum + payment.grossAmount, 0);
+  const refundDataIncomplete = payments.some((payment) => payment.refundedAmount === undefined);
+  const refundedTotal = payments.reduce(
+    (sum, payment) => sum + (payment.refundedAmount ?? 0),
+    0
+  );
+  const netTotal = capturedTotal - refundedTotal;
   const exceptionCount = payments.filter((payment) => payment.status !== "paid").length;
 
   return (
@@ -61,14 +70,22 @@ export default async function PaymentsPage() {
             </p>
           </div>
 
-          <dl className="grid grid-cols-3 divide-x divide-line border border-line bg-card text-right shadow-card">
+          <dl className="grid grid-cols-2 divide-x divide-y divide-line border border-line bg-card text-right shadow-card sm:grid-cols-4 sm:divide-y-0">
             <div className="px-4 py-3 sm:px-5">
               <dt className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-muted">Captured</dt>
               <dd className="mt-1 font-display text-xl font-black">{money(capturedTotal)}</dd>
             </div>
             <div className="px-4 py-3 sm:px-5">
-              <dt className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-muted">Paid</dt>
-              <dd className="mt-1 font-display text-xl font-black">{paidCount}</dd>
+              <dt className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-muted">Refunded</dt>
+              <dd className="mt-1 font-display text-xl font-black">
+                {refundDataIncomplete ? "Pending" : money(refundedTotal)}
+              </dd>
+            </div>
+            <div className="px-4 py-3 sm:px-5">
+              <dt className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-muted">Net received</dt>
+              <dd className="mt-1 font-display text-xl font-black">
+                {refundDataIncomplete ? "Pending" : money(netTotal)}
+              </dd>
             </div>
             <div className="px-4 py-3 sm:px-5">
               <dt className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-muted">Exceptions</dt>
@@ -89,18 +106,20 @@ export default async function PaymentsPage() {
 
         {payments.length > 0 ? (
           <div className="overflow-x-auto rounded-2xl border border-line bg-card shadow-card">
-            <div className="min-w-[820px]">
-              <div className="grid grid-cols-[1.1fr_1.6fr_165px_140px_140px] gap-5 border-b border-line bg-paper px-5 py-3 font-mono text-xs font-bold uppercase tracking-[0.14em] text-muted">
+            <div className="min-w-[1120px]">
+              <div className="grid grid-cols-[1.1fr_1.5fr_150px_120px_120px_120px_145px] gap-5 border-b border-line bg-paper px-5 py-3 font-mono text-xs font-bold uppercase tracking-[0.14em] text-muted">
                 <span>Client</span>
                 <span>Products purchased</span>
                 <span>Received</span>
-                <span className="text-right">Amount</span>
+                <span className="text-right">Gross</span>
+                <span className="text-right">Refunded</span>
+                <span className="text-right">Net</span>
                 <span className="text-right">Status</span>
               </div>
               {payments.map((payment) => (
                 <div
                   key={payment.id}
-                  className="grid grid-cols-[1.1fr_1.6fr_165px_140px_140px] gap-5 border-b border-line px-5 py-4 last:border-b-0"
+                  className="grid grid-cols-[1.1fr_1.5fr_150px_120px_120px_120px_145px] gap-5 border-b border-line px-5 py-4 last:border-b-0"
                 >
                   <div className="min-w-0">
                     <p className="truncate font-bold">{payment.client}</p>
@@ -109,19 +128,31 @@ export default async function PaymentsPage() {
                     </p>
                   </div>
                   <div className="min-w-0">
-                    <Link
-                      href={`/admin/orders/${payment.orderIds[0]}`}
-                      className="group inline-flex max-w-full items-start gap-1.5 font-bold text-ink transition hover:text-violet"
-                    >
-                      <span className="truncate">{payment.products.join(" · ")}</span>
-                      <ArrowUpRight className="mt-0.5 size-3.5 shrink-0 opacity-0 transition group-hover:opacity-100" />
-                    </Link>
+                    {payment.orderIds[0] ? (
+                      <Link
+                        href={`/admin/orders/${payment.orderIds[0]}`}
+                        className="group inline-flex max-w-full items-start gap-1.5 font-bold text-ink transition hover:text-violet"
+                      >
+                        <span className="truncate">{payment.products.join(" · ")}</span>
+                        <ArrowUpRight className="mt-0.5 size-3.5 shrink-0 opacity-0 transition group-hover:opacity-100" />
+                      </Link>
+                    ) : (
+                      <p className="truncate font-bold">{payment.products.join(" · ")}</p>
+                    )}
                     {payment.products.length > 1 ? (
                       <p className="mt-1 text-xs text-muted">{payment.orderIds.length} order records</p>
+                    ) : payment.orderIds.length === 0 ? (
+                      <p className="mt-1 text-xs font-bold text-coral-ink">Order creation requires reconciliation</p>
                     ) : null}
                   </div>
                   <p className="text-sm text-muted">{payment.paidAt}</p>
-                  <p className="text-right font-display text-xl font-black">{money(payment.amount)}</p>
+                  <p className="text-right font-display text-xl font-black">{money(payment.grossAmount)}</p>
+                  <p className="text-right font-display text-xl font-black">
+                    {payment.refundedAmount === undefined ? "Pending" : money(payment.refundedAmount)}
+                  </p>
+                  <p className="text-right font-display text-xl font-black">
+                    {payment.netAmount === undefined ? "Pending" : money(payment.netAmount)}
+                  </p>
                   <div className="text-right">
                     <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${paymentTone[payment.status]}`}>
                       {paymentLabel[payment.status]}

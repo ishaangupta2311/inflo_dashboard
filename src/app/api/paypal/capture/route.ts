@@ -19,9 +19,12 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = (await req.json()) as { paypalOrderId?: string };
-    const paypalOrderId = String(body.paypalOrderId || "").trim();
-    if (!paypalOrderId) {
+    const body: unknown = await req.json();
+    const paypalOrderId =
+      body && typeof body === "object" && "paypalOrderId" in body
+        ? String(body.paypalOrderId || "").trim()
+        : "";
+    if (!/^[A-Z0-9-]{6,64}$/i.test(paypalOrderId)) {
       return Response.json({ error: "Missing PayPal order id." }, { status: 400 });
     }
     await ensurePaypalCheckoutOwner(paypalOrderId, userId);
@@ -38,6 +41,7 @@ export async function POST(req: Request) {
 
     revalidatePath("/orders");
     revalidatePath("/invoices");
+    revalidatePath("/admin/payments");
     return Response.json({ ok: true, count: result.count });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not complete payment.";

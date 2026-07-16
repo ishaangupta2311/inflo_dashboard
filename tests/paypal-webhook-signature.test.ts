@@ -15,11 +15,32 @@ test("posts PayPal transmission data for signature verification", async () => {
     if (url.endsWith("/v1/oauth2/token")) {
       return Response.json({ access_token: "token", expires_in: 3600 });
     }
+    if (url.includes("/v2/checkout/orders/")) {
+      return Response.json({
+        id: "ORDER-1",
+        status: "COMPLETED",
+        purchase_units: [
+          {
+            custom_id: "checkout-1",
+            payments: {
+              captures: [
+                { id: "CAPTURE-1", amount: { value: "100.00", currency_code: "USD" } }
+              ],
+              refunds: [
+                { status: "COMPLETED", amount: { value: "10.25", currency_code: "USD" } },
+                { status: "COMPLETED", amount: { value: "4.75", currency_code: "USD" } },
+                { status: "PENDING", amount: { value: "20.00", currency_code: "USD" } }
+              ]
+            }
+          }
+        ]
+      });
+    }
     return Response.json({ verification_status: "SUCCESS" });
   };
 
   try {
-    const { verifyPaypalWebhookSignature } = await import("../src/lib/paypal.ts");
+    const { getPaypalOrder, verifyPaypalWebhookSignature } = await import("../src/lib/paypal.ts");
     const verified = await verifyPaypalWebhookSignature(
       {
         transmissionId: "transmission-1",
@@ -43,6 +64,9 @@ test("posts PayPal transmission data for signature verification", async () => {
       webhook_id: "sandbox-webhook",
       webhook_event: { id: "WH-1", event_type: "PAYMENT.CAPTURE.COMPLETED" }
     });
+
+    const order = await getPaypalOrder("ORDER-1");
+    assert.equal(order.refundedValue, "15.00");
   } finally {
     globalThis.fetch = originalFetch;
   }

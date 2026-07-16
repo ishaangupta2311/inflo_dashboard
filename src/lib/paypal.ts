@@ -111,7 +111,25 @@ export type CaptureResult = {
 export type PaypalOrderDetails = CaptureResult & {
   id: string;
   customId?: string;
+  refundedValue?: string;
 };
+
+function completedRefundTotal(refunds: unknown, currency: string | undefined): string | undefined {
+  if (!Array.isArray(refunds) || !currency) return "0.00";
+  let cents = 0;
+  for (const candidate of refunds) {
+    const refund = candidate as {
+      status?: string;
+      amount?: { value?: string; currency_code?: string };
+    };
+    if (refund.status !== "COMPLETED" || refund.amount?.currency_code !== currency) continue;
+    const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(String(refund.amount.value ?? ""));
+    if (!match) throw new Error("PayPal returned an invalid refund amount.");
+    cents += Number(match[1]) * 100 + Number((match[2] ?? "").padEnd(2, "0"));
+  }
+  if (!Number.isSafeInteger(cents)) throw new Error("PayPal refund total is too large.");
+  return (cents / 100).toFixed(2);
+}
 
 /** Capture (collect) the money for a previously-approved PayPal order. */
 export async function capturePaypalOrder(paypalOrderId: string): Promise<CaptureResult> {
@@ -157,19 +175,28 @@ export async function getPaypalOrder(paypalOrderId: string): Promise<PaypalOrder
 
   const unit = data?.purchase_units?.[0];
   const capture = unit?.payments?.captures?.[0];
+  const currency = capture?.amount?.currency_code;
   return {
     id: data.id as string,
     status: data.status as string,
     customId: unit?.custom_id,
     captureId: capture?.id,
     capturedValue: capture?.amount?.value,
-    currency: capture?.amount?.currency_code,
+    currency,
+    refundedValue: completedRefundTotal(unit?.payments?.refunds, currency),
     payerEmail: data?.payer?.email_address
   };
 }
 
-/** Reconcile full versus partial refunds from the current capture state. */
-export async function getPaypalCaptureStatus(captureId: string): Promise<string> {
+export type PaypalCaptureDetails = {
+  status: string;
+  capturedValue?: string;
+  currency?: string;
+  paypalOrderId?: string;
+};
+
+/** Reconcile cumulative refund money from the authoritative capture state. */
+export async function getPaypalCaptureDetails(captureId: string): Promise<PaypalCaptureDetails> {
   const token = await accessToken();
   const res = await fetch(`${API_BASE}/v2/payments/captures/${encodeURIComponent(captureId)}`, {
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
@@ -179,7 +206,12 @@ export async function getPaypalCaptureStatus(captureId: string): Promise<string>
   if (!res.ok) {
     throw new Error(`PayPal show-capture failed (${res.status}): ${JSON.stringify(data)}`);
   }
-  return String(data?.status ?? "");
+  return {
+    status: String(data?.status ?? ""),
+    capturedValue: data?.amount?.value,
+    currency: data?.amount?.currency_code,
+    paypalOrderId: data?.supplementary_data?.related_ids?.order_id
+  };
 }
 
 export type PaypalTransmissionHeaders = {

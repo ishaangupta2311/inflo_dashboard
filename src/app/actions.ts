@@ -8,7 +8,6 @@ import {
   createQuoteRequest,
   updateOrderLinksClient,
   updateOrderPrItemsClient,
-  type CartLine,
   type ClientLinkEdit,
   type ClientPrEdit
 } from "@/lib/order-backend";
@@ -16,11 +15,7 @@ import {
 export type CheckoutResult = { ok: true; count: number } | { ok: false; error: string };
 export type SaveLinksResult = { ok: true } | { ok: false; error: string };
 
-export async function checkoutAction(input: {
-  lines: CartLine[];
-  brief?: string;
-  discountCode?: string;
-}): Promise<CheckoutResult> {
+export async function checkoutAction(input: unknown): Promise<CheckoutResult> {
   try {
     const orders = await createOrdersFromCart(input);
     revalidatePath("/orders");

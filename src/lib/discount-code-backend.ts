@@ -15,9 +15,38 @@ export type DiscountCodeSummary = {
   createdAt: string;
 };
 
-export async function resolveActiveDiscount(rawCode?: string): Promise<AppliedDiscount | undefined> {
+const DISCOUNT_ATTEMPT_LIMIT = 10;
+const DISCOUNT_ATTEMPT_WINDOW_MS = 10 * 60 * 1000;
+
+async function consumeDiscountAttempt(actorKey: string): Promise<void> {
+  const key = actorKey.trim().slice(0, 128);
+  if (!key) throw new Error("Not authenticated.");
+
+  const now = new Date();
+  const cutoff = new Date(now.getTime() - DISCOUNT_ATTEMPT_WINDOW_MS);
+  const updated = await prisma.$transaction(async (tx) => {
+    await tx.discountValidationLimit.updateMany({
+      where: { key, windowStartedAt: { lte: cutoff } },
+      data: { attempts: 0, windowStartedAt: now }
+    });
+    return tx.discountValidationLimit.upsert({
+      where: { key },
+      create: { key, attempts: 1, windowStartedAt: now },
+      update: { attempts: { increment: 1 } }
+    });
+  });
+  if (updated.attempts > DISCOUNT_ATTEMPT_LIMIT) {
+    throw new Error("Too many discount attempts. Try again in a few minutes.");
+  }
+}
+
+export async function resolveActiveDiscount(
+  rawCode?: string,
+  actorKey?: string
+): Promise<AppliedDiscount | undefined> {
   const code = normalizeDiscountCode(rawCode ?? "");
   if (!code) return undefined;
+  if (actorKey) await consumeDiscountAttempt(actorKey);
   if (!isValidDiscountCode(code)) {
     throw new Error("Enter a valid discount code.");
   }

@@ -1,7 +1,8 @@
 import { revalidatePath } from "next/cache";
 import {
   capturePaypalOrder,
-  getPaypalCaptureStatus,
+  getPaypalCaptureDetails,
+  getPaypalOrder,
   isPaypalWebhookConfigured,
   verifyPaypalWebhookSignature,
   type CaptureResult,
@@ -14,6 +15,7 @@ import {
 import {
   captureAmountForEvent,
   captureIdForEvent,
+  parsePaypalMoney,
   paypalOrderIdForEvent,
   type PaypalWebhookEvent
 } from "@/lib/paypal-webhook-event";
@@ -81,6 +83,7 @@ export async function POST(req: Request) {
       });
       revalidatePath("/orders");
       revalidatePath("/invoices");
+      revalidatePath("/admin/payments");
     } else if (event.event_type === "CHECKOUT.ORDER.APPROVED") {
       if (!paypalOrderId) throw new Error("Approved checkout did not include a PayPal order id.");
       await recordPaypalCheckoutState({
@@ -96,6 +99,7 @@ export async function POST(req: Request) {
       });
       revalidatePath("/orders");
       revalidatePath("/invoices");
+      revalidatePath("/admin/payments");
     } else if (event.event_type === "PAYMENT.CAPTURE.DENIED") {
       await recordPaypalCheckoutState({
         status: "denied",
@@ -105,18 +109,32 @@ export async function POST(req: Request) {
       });
     } else if (event.event_type === "PAYMENT.CAPTURE.REFUNDED") {
       if (!captureId) throw new Error("Refund event did not include a capture id.");
-      const captureStatus = await getPaypalCaptureStatus(captureId);
-      if (captureStatus !== "REFUNDED" && captureStatus !== "PARTIALLY_REFUNDED") {
-        throw new Error(`Capture refund state is not available yet (${captureStatus || "unknown"}).`);
+      const captureDetails = await getPaypalCaptureDetails(captureId);
+      if (captureDetails.status !== "REFUNDED" && captureDetails.status !== "PARTIALLY_REFUNDED") {
+        throw new Error(
+          `Capture refund state is not available yet (${captureDetails.status || "unknown"}).`
+        );
+      }
+      const resolvedPaypalOrderId = paypalOrderId ?? captureDetails.paypalOrderId;
+      if (!resolvedPaypalOrderId) throw new Error("Refund did not include a PayPal order id.");
+      const orderDetails = await getPaypalOrder(resolvedPaypalOrderId);
+      const capturedAmount = parsePaypalMoney(captureDetails.capturedValue);
+      const refundedAmount = parsePaypalMoney(orderDetails.refundedValue);
+      if (capturedAmount === undefined || refundedAmount === undefined) {
+        throw new Error("Capture refund totals are unavailable.");
       }
       await recordPaypalCheckoutState({
-        status: captureStatus === "REFUNDED" ? "refunded" : "partially_refunded",
+        status: captureDetails.status === "REFUNDED" ? "refunded" : "partially_refunded",
         eventType: event.event_type,
-        paypalOrderId,
-        captureId
+        paypalOrderId: resolvedPaypalOrderId,
+        captureId,
+        capturedAmount,
+        refundedAmount,
+        currency: captureDetails.currency
       });
       revalidatePath("/orders");
       revalidatePath("/invoices");
+      revalidatePath("/admin/payments");
     }
 
     return Response.json({ received: true });

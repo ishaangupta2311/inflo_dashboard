@@ -3,10 +3,19 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, requireStaff } from "@/lib/auth";
-import { catalogBySlug, findBuyable, type Buyable } from "@/lib/catalog";
+import { catalogBySlug, findBuyable } from "@/lib/catalog";
+import {
+  allocateChargeAmounts,
+  parseCartLines,
+  parseCartSnapshot,
+  parseClientCheckoutInput,
+  type CartLine,
+  type CartSnapshotLine
+} from "@/lib/cart-checkout";
 import { discountedAmount, roundCurrency, type AppliedDiscount } from "@/lib/discount-code";
 import { resolveActiveDiscount } from "@/lib/discount-code-backend";
 import { money, serviceOptions, type Order, type OrderStatus } from "@/lib/orders";
+import { isPaypalConfigured } from "@/lib/paypal";
 import {
   sendMessageEmail,
   sendOrderCompletedEmail,
@@ -368,50 +377,63 @@ export async function createOrder(input: CreateOrderInput) {
 // to a webhook on successful payment.
 // ---------------------------------------------------------------------------
 
-export type CartLine = { id: string; quantity: number };
-// `payment`, when present, marks every created order paid — the cart flow only
-// passes it after PayPal has actually captured the money.
-export type CheckoutInput = {
-  lines: CartLine[];
+export type { CartLine } from "@/lib/cart-checkout";
+
+// This input is server-owned and only constructed after a verified capture or
+// after the server has explicitly selected the non-PayPal fallback flow.
+type VerifiedCheckoutInput = {
+  lines: CartSnapshotLine[];
   targetUrl?: string;
   brief?: string;
-  // Raw code supplied by a client-facing checkout. It is always resolved again
-  // on the server; the browser never submits a discount amount or percentage.
-  discountCode?: string;
-  // A server-owned snapshot for durable PayPal checkout recovery. Never accept
-  // this value from a client-facing action.
   appliedDiscount?: AppliedDiscount;
+  chargeAmount: number;
   payment?: { ref: string; paidAt?: Date };
 };
 
-type ResolvedLine = { buyable: Buyable; quantity: number };
+type ResolvedLine = CartSnapshotLine;
 
 function summariseLines(lines: ResolvedLine[]): string {
   return lines
-    .map(({ buyable, quantity }) => (quantity > 1 ? `${buyable.name} ×${quantity}` : buyable.name))
+    .map(({ name, quantity }) => (quantity > 1 ? `${name} ×${quantity}` : name))
     .join(", ");
 }
 
 // Resolve raw cart lines to catalog buyables, dropping unknown ids and clamping
 // quantities. Shared by priceCart (server-authoritative total for PayPal) and
 // createOrdersFromCart, so the price quoted and the price charged can't diverge.
-function resolveCartLines(lines: CartLine[]): ResolvedLine[] {
+export function snapshotCart(lines: CartLine[]): CartSnapshotLine[] {
   return lines
     .map((line) => ({
       buyable: findBuyable(line.id),
-      quantity: Math.max(1, Math.min(99, Math.round(line.quantity || 1)))
+      quantity: line.quantity
     }))
-    .filter((entry): entry is ResolvedLine => Boolean(entry.buyable));
+    .filter((entry): entry is { buyable: NonNullable<ReturnType<typeof findBuyable>>; quantity: number } =>
+      Boolean(entry.buyable)
+    )
+    .map(({ buyable, quantity }) => ({
+      id: buyable.id,
+      quantity,
+      unitPrice: buyable.price,
+      name: buyable.name,
+      description: buyable.description,
+      billing: buyable.billing,
+      serviceSlug: buyable.service.slug,
+      serviceName: buyable.service.name,
+      category: buyable.service.category,
+      links: buyable.links,
+      dr: buyable.dr,
+      prFeatures: buyable.prFeatures
+    }));
 }
 
 // Authoritative server-side price for a cart. Used to set the PayPal order amount
 // and to re-verify it at capture — the client never supplies the amount.
 export function priceCart(lines: CartLine[]): { amount: number; description: string } {
-  const resolved = resolveCartLines(lines);
+  const resolved = snapshotCart(lines);
   if (resolved.length === 0) {
     throw new Error("Your cart is empty.");
   }
-  const amount = resolved.reduce((sum, { buyable, quantity }) => sum + buyable.price * quantity, 0);
+  const amount = resolved.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
   return { amount, description: summariseLines(resolved) };
 }
 
@@ -420,35 +442,44 @@ export type CartQuote = {
   amount: number;
   discount?: AppliedDiscount;
   description: string;
+  lines: CartSnapshotLine[];
 };
 
 // Resolves a code and prices the cart in one server-side operation. This is
 // used for the checkout preview and again before a PayPal order is created.
-export async function quoteCart(lines: CartLine[], rawDiscountCode?: string): Promise<CartQuote> {
-  const priced = priceCart(lines);
-  const discount = await resolveActiveDiscount(rawDiscountCode);
+export async function quoteCart(
+  lines: CartLine[],
+  rawDiscountCode?: string,
+  actorKey?: string
+): Promise<CartQuote> {
+  const snapshot = snapshotCart(lines);
+  if (snapshot.length === 0) throw new Error("Your cart is empty.");
+  const originalAmount = snapshot.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0);
+  const discount = await resolveActiveDiscount(rawDiscountCode, actorKey);
   return {
-    originalAmount: priced.amount,
-    amount: discount ? discountedAmount(priced.amount, discount.percentage) : priced.amount,
+    originalAmount,
+    amount: discount ? discountedAmount(originalAmount, discount.percentage) : originalAmount,
     discount,
-    description: priced.description
+    description: summariseLines(snapshot),
+    lines: snapshot
   };
 }
 
-export async function createOrdersFromCart(input: CheckoutInput) {
+export async function createOrdersFromCart(input: unknown) {
   noStore();
   const userId = await requireUserId();
+  if (isPaypalConfigured()) {
+    throw new Error("Payment is required before an order can be created.");
+  }
+  const parsed = parseClientCheckoutInput(input);
   const email = await currentUserEmail();
-  const appliedDiscount = await resolveActiveDiscount(input.discountCode);
-  // Deliberately reconstruct the input so a crafted Server Action payload
-  // cannot smuggle in its own percentage or price.
-  return createOrdersFromCartForUser(
+  const quote = await quoteCart(parsed.lines, parsed.discountCode, userId);
+  return createOrdersFromVerifiedCheckout(
     {
-      lines: input.lines,
-      targetUrl: input.targetUrl,
-      brief: input.brief,
-      payment: input.payment,
-      appliedDiscount
+      lines: quote.lines,
+      brief: parsed.brief,
+      appliedDiscount: quote.discount,
+      chargeAmount: quote.amount
     },
     { userId, email }
   );
@@ -457,8 +488,8 @@ export async function createOrdersFromCart(input: CheckoutInput) {
 // Server-authenticated variant used by verified payment webhooks, which do not
 // have a Clerk browser session. Callers must derive this identity from a
 // persisted checkout rather than from the webhook payload.
-export async function createOrdersFromCartForUser(
-  input: CheckoutInput,
+export async function createOrdersFromVerifiedCheckout(
+  input: VerifiedCheckoutInput,
   identity: { userId: string; email?: string | null }
 ) {
   noStore();
@@ -480,7 +511,7 @@ export async function createOrdersFromCartForUser(
     }
   }
 
-  const resolved = resolveCartLines(input.lines);
+  const resolved = input.lines;
 
   if (resolved.length === 0) {
     throw new Error("Your cart is empty.");
@@ -505,7 +536,7 @@ export async function createOrdersFromCartForUser(
   // One order per catalog service — all lines of the same service consolidate together.
   const groups = new Map<string, ResolvedLine[]>();
   for (const entry of resolved) {
-    const key = entry.buyable.service.slug;
+    const key = entry.serviceSlug;
     const existing = groups.get(key);
     if (existing) {
       existing.push(entry);
@@ -517,15 +548,18 @@ export async function createOrdersFromCartForUser(
   const now = new Date();
   const briefNote = input.brief?.trim() ? `Client note: ${input.brief.trim().slice(0, 120)}` : undefined;
 
+  const groupedLines = [...groups.values()];
+  const listAmounts = groupedLines.map((lines) =>
+    lines.reduce((sum, line) => sum + line.unitPrice * line.quantity, 0)
+  );
+  const allocatedAmounts = allocateChargeAmounts(listAmounts, input.chargeAmount);
+
   const created = await prisma.$transaction(
-    [...groups.values()].map((lines) => {
-      const service = lines[0].buyable.service;
-      const listAmount = lines.reduce((sum, { buyable, quantity }) => sum + buyable.price * quantity, 0);
-      const amount = input.appliedDiscount
-        ? discountedAmount(listAmount, input.appliedDiscount.percentage)
-        : listAmount;
-      const billing = lines.some(({ buyable }) => buyable.billing === "monthly") ? "monthly" : "one_time";
-      const packageId = lines.length === 1 ? lines[0].buyable.id : null;
+    groupedLines.map((lines, groupIndex) => {
+      const service = lines[0];
+      const amount = allocatedAmounts[groupIndex];
+      const billing = lines.some((line) => line.billing === "monthly") ? "monthly" : "one_time";
+      const packageId = lines.length === 1 ? lines[0].id : null;
       const dueAt = new Date(now);
       dueAt.setDate(now.getDate() + leadDaysForCategory(service.category));
 
@@ -533,8 +567,8 @@ export async function createOrdersFromCartForUser(
       // individual placement row (both render as a per-row table, not %).
       if (service.category === "Link Building" || service.category === "AI SEO") {
         const linkRows = lines
-          .flatMap(({ buyable, quantity }) =>
-            Array.from({ length: quantity * buyable.links }, () => buyable.dr)
+          .flatMap((line) =>
+            Array.from({ length: line.quantity * line.links }, () => line.dr)
           )
           .map((orderedDr, index) => ({ position: index + 1, orderedDr }));
 
@@ -542,7 +576,7 @@ export async function createOrdersFromCartForUser(
           data: {
             userId,
             userEmail: email,
-            service: `${service.name} — ${linkRows.length} ${linkRows.length === 1 ? "placement" : "placements"}`,
+            service: `${service.serviceName} — ${linkRows.length} ${linkRows.length === 1 ? "placement" : "placements"}`,
             category: service.category,
             packageId,
             packageName: summariseLines(lines),
@@ -566,10 +600,7 @@ export async function createOrdersFromCartForUser(
 
       // Digital PR: expand every unit into an individual media-feature row.
       if (service.category === "Digital PR") {
-        const featureCount = lines.reduce(
-          (sum, { buyable, quantity }) => sum + quantity * buyable.prFeatures,
-          0
-        );
+        const featureCount = lines.reduce((sum, line) => sum + line.quantity * line.prFeatures, 0);
 
         // featureCount 0 only happens for a misconfigured PR buyable — fall
         // through to the consolidated deliverables order rather than an empty one.
@@ -580,7 +611,7 @@ export async function createOrdersFromCartForUser(
             data: {
               userId,
               userEmail: email,
-              service: `${service.name} — ${prRows.length} ${prRows.length === 1 ? "feature" : "features"}`,
+              service: `${service.serviceName} — ${prRows.length} ${prRows.length === 1 ? "feature" : "features"}`,
               category: service.category,
               packageId,
               packageName: summariseLines(lines),
@@ -608,7 +639,7 @@ export async function createOrdersFromCartForUser(
         data: {
           userId,
           userEmail: email,
-          service: `${service.name} — ${summariseLines(lines)}`,
+          service: `${service.serviceName} — ${summariseLines(lines)}`,
           category: service.category,
           packageId,
           packageName: summariseLines(lines),
@@ -620,9 +651,8 @@ export async function createOrdersFromCartForUser(
           progress: 12,
           targetUrl,
           deliverables: [
-            ...lines.map(
-              ({ buyable, quantity }) =>
-                `${buyable.name}${quantity > 1 ? ` ×${quantity}` : ""} — ${buyable.description}`
+            ...lines.map((line) =>
+              `${line.name}${line.quantity > 1 ? ` ×${line.quantity}` : ""} — ${line.description}`
             ),
             briefNote ?? "Order received by fulfilment team"
           ],
@@ -894,9 +924,11 @@ export type PaymentRecord = {
   userId: string;
   products: string[];
   orderIds: string[];
-  amount: number;
+  grossAmount: number;
+  refundedAmount?: number;
+  netAmount?: number;
   paidAt: string;
-  status: "paid" | "partially_refunded" | "refunded";
+  status: "paid" | "partially_refunded" | "refunded" | "processing" | "reconciliation_required";
 };
 
 export type OrderMutationInput = {
@@ -914,86 +946,92 @@ export async function listAllOrders(): Promise<AdminOrder[]> {
   return rows.map(toAdminOrder);
 }
 
-// One completed PayPal checkout can create several Order rows (one per
-// service). Group on paymentRef so finance sees one captured payment rather
-// than a duplicate charge for every service in the cart.
+function checkoutProducts(lines: unknown): string[] {
+  let snapshot = parseCartSnapshot(lines);
+  if (!snapshot) {
+    try {
+      snapshot = snapshotCart(parseCartLines(lines));
+    } catch {
+      return ["Checkout details unavailable"];
+    }
+  }
+  return [...new Set(snapshot.map((line) => `${line.serviceName} — ${line.name}`))];
+}
+
+// Captured PayPal checkouts are the immutable financial source of truth. Order
+// rows are joined only for navigation and product labels, never for money.
 export async function listPaymentsForAdmin(): Promise<PaymentRecord[]> {
   noStore();
   await requireAdmin();
-  const rows = await prisma.order.findMany({
-    where: { paymentStatus: { in: ["paid", "partially_refunded", "refunded"] } },
+  const checkouts = await prisma.payPalCheckout.findMany({
+    where: { capturedAmount: { not: null } },
     orderBy: [{ paidAt: "desc" }, { createdAt: "desc" }],
     select: {
       id: true,
       userId: true,
       userEmail: true,
-      service: true,
-      amount: true,
-      paymentStatus: true,
+      lines: true,
+      capturedAmount: true,
+      refundedAmount: true,
       paidAt: true,
-      paymentRef: true,
+      paypalOrderId: true,
+      status: true,
       createdAt: true
     }
   });
-
-  const statusRank = { paid: 0, partially_refunded: 1, refunded: 2 } as const;
-  const grouped = new Map<
-    string,
-    PaymentRecord & { paidAtValue: Date | null; createdAtValue: Date; statusRank: number }
-  >();
-
-  for (const row of rows) {
-    const status =
-      row.paymentStatus === "partially_refunded" || row.paymentStatus === "refunded"
-        ? row.paymentStatus
-        : "paid";
-    const key = row.paymentRef ?? `order:${row.id}`;
-    const current = grouped.get(key);
-
-    if (current) {
-      current.amount += Number(row.amount);
-      current.orderIds.push(row.id);
-      if (!current.products.includes(row.service)) current.products.push(row.service);
-      if (statusRank[status] > current.statusRank) {
-        current.status = status;
-        current.statusRank = statusRank[status];
-      }
-      continue;
-    }
-
-    grouped.set(key, {
-      id: key,
-      reference: row.paymentRef ?? undefined,
-      client: row.userEmail ?? `${row.userId.slice(0, 14)}…`,
-      userId: row.userId,
-      products: [row.service],
-      orderIds: [row.id],
-      amount: Number(row.amount),
-      paidAt: row.paidAt ? formatDateTime(row.paidAt) : "Payment date unavailable",
-      paidAtValue: row.paidAt,
-      createdAtValue: row.createdAt,
-      status,
-      statusRank: statusRank[status]
-    });
+  const references = checkouts.flatMap((checkout) =>
+    checkout.paypalOrderId ? [checkout.paypalOrderId] : []
+  );
+  const orders = references.length
+    ? await prisma.order.findMany({
+        where: { paymentRef: { in: references } },
+        select: { id: true, paymentRef: true, service: true }
+      })
+    : [];
+  const ordersByReference = new Map<string, typeof orders>();
+  for (const order of orders) {
+    if (!order.paymentRef) continue;
+    const grouped = ordersByReference.get(order.paymentRef) ?? [];
+    grouped.push(order);
+    ordersByReference.set(order.paymentRef, grouped);
   }
 
-  return [...grouped.values()]
-    .sort(
-      (a, b) =>
-        (b.paidAtValue?.getTime() ?? b.createdAtValue.getTime()) -
-        (a.paidAtValue?.getTime() ?? a.createdAtValue.getTime())
-    )
-    .map((payment) => ({
-      id: payment.id,
-      reference: payment.reference,
-      client: payment.client,
-      userId: payment.userId,
-      products: payment.products,
-      orderIds: payment.orderIds,
-      amount: payment.amount,
-      paidAt: payment.paidAt,
-      status: payment.status
-    }));
+  return checkouts.map((checkout) => {
+    const relatedOrders = checkout.paypalOrderId
+      ? (ordersByReference.get(checkout.paypalOrderId) ?? [])
+      : [];
+    const grossAmount = Number(checkout.capturedAmount);
+    const refundedAmount =
+      checkout.refundedAmount === null ? undefined : Number(checkout.refundedAmount);
+    const status: PaymentRecord["status"] =
+      checkout.status === "partially_refunded" || checkout.status === "refunded"
+        ? checkout.status
+        : relatedOrders.length === 0 || checkout.status === "reconciliation_required"
+          ? "reconciliation_required"
+          : checkout.status === "processing"
+            ? "processing"
+            : "paid";
+
+    return {
+      id: checkout.id,
+      reference: checkout.paypalOrderId ?? undefined,
+      client: checkout.userEmail ?? `${checkout.userId.slice(0, 14)}…`,
+      userId: checkout.userId,
+      products:
+        relatedOrders.length > 0
+          ? [...new Set(relatedOrders.map((order) => order.service))]
+          : checkoutProducts(checkout.lines),
+      orderIds: relatedOrders.map((order) => order.id),
+      grossAmount,
+      refundedAmount,
+      netAmount:
+        refundedAmount === undefined
+          ? undefined
+          : roundCurrency(Math.max(0, grossAmount - refundedAmount)),
+      paidAt: formatDateTime(checkout.paidAt ?? checkout.createdAt),
+      status
+    };
+  });
 }
 
 export async function getAdminOrder(id: string): Promise<AdminOrderDetail | undefined> {

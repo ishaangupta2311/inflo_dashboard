@@ -1,7 +1,7 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { isPaypalConfigured } from "@/lib/paypal";
 import { preparePaypalCheckout } from "@/lib/paypal-checkout-backend";
-import type { CartLine } from "@/lib/order-backend";
+import { parseClientCheckoutInput } from "@/lib/cart-checkout";
 
 // Step 1 of PayPal checkout: the browser SDK's createOrder callback hits this.
 // We price the cart server-side (never trusting a client amount) and open a
@@ -16,17 +16,16 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = (await req.json()) as { lines?: CartLine[]; brief?: string; discountCode?: string };
-    const lines = Array.isArray(body.lines) ? body.lines : [];
+    const input = parseClientCheckoutInput(await req.json());
     const user = await currentUser();
     const userEmail =
       user?.primaryEmailAddress?.emailAddress ?? user?.emailAddresses?.[0]?.emailAddress;
     const checkout = await preparePaypalCheckout({
       userId,
       userEmail,
-      lines,
-      brief: body.brief,
-      discountCode: body.discountCode
+      lines: input.lines,
+      brief: input.brief,
+      discountCode: input.discountCode
     });
 
     return Response.json({ id: checkout.paypalOrderId });

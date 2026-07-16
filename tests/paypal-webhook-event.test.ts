@@ -4,6 +4,7 @@ import {
   captureAmountForEvent,
   captureIdForEvent,
   capturedAmountMatches,
+  parsePaypalMoney,
   paypalOrderIdForEvent,
   type PaypalWebhookEvent
 } from "../src/lib/paypal-webhook-event.ts";
@@ -49,4 +50,11 @@ test("requires both exact amount and matching currency", () => {
   assert.equal(capturedAmountMatches(125, "USD", undefined, "USD"), false);
   assert.equal(capturedAmountMatches(125, "USD", "125.001", "USD"), false);
   assert.equal(capturedAmountMatches(125, "USD", "not-a-number", "USD"), false);
+});
+
+test("parses PayPal money without accepting excess precision", () => {
+  assert.equal(parsePaypalMoney("63.65"), 63.65);
+  assert.equal(parsePaypalMoney("2.4"), 2.4);
+  assert.equal(parsePaypalMoney("2.401"), undefined);
+  assert.equal(parsePaypalMoney("not-a-number"), undefined);
 });
