@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BadgePercent, FileText, Settings, ShoppingBag, Store } from "lucide-react";
+import { BadgePercent, CreditCard, FileText, Settings, ShoppingBag, Store } from "lucide-react";
 import type { ComponentType } from "react";
 
 type NavItem = {
@@ -22,7 +22,10 @@ export function SidebarNav({ staff, admin }: { staff: boolean; admin: boolean })
     ? [
         { label: "Orders", href: "/admin", icon: ShoppingBag, activePrefix: "/admin" },
         ...(admin
-          ? [{ label: "Discount codes", href: "/admin/discounts", icon: BadgePercent, activePrefix: "/admin/discounts" }]
+          ? [
+              { label: "Payments", href: "/admin/payments", icon: CreditCard, activePrefix: "/admin/payments" },
+              { label: "Discount codes", href: "/admin/discounts", icon: BadgePercent, activePrefix: "/admin/discounts" }
+            ]
           : []),
         { label: "Settings", href: "/settings", icon: Settings, activePrefix: "/settings" }
       ]

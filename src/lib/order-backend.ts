@@ -2,7 +2,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
-import { requireStaff } from "@/lib/auth";
+import { requireAdmin, requireStaff } from "@/lib/auth";
 import { catalogBySlug, findBuyable, type Buyable } from "@/lib/catalog";
 import { discountedAmount, roundCurrency, type AppliedDiscount } from "@/lib/discount-code";
 import { resolveActiveDiscount } from "@/lib/discount-code-backend";
@@ -887,6 +887,18 @@ export type AdminOrderDetail = {
   prItems: OrderPrItemEntry[];
 };
 
+export type PaymentRecord = {
+  id: string;
+  reference?: string;
+  client: string;
+  userId: string;
+  products: string[];
+  orderIds: string[];
+  amount: number;
+  paidAt: string;
+  status: "paid" | "partially_refunded" | "refunded";
+};
+
 export type OrderMutationInput = {
   status?: OrderStatus;
   progress?: number;
@@ -900,6 +912,88 @@ export async function listAllOrders(): Promise<AdminOrder[]> {
   await requireStaff();
   const rows = await prisma.order.findMany({ orderBy: { createdAt: "desc" } });
   return rows.map(toAdminOrder);
+}
+
+// One completed PayPal checkout can create several Order rows (one per
+// service). Group on paymentRef so finance sees one captured payment rather
+// than a duplicate charge for every service in the cart.
+export async function listPaymentsForAdmin(): Promise<PaymentRecord[]> {
+  noStore();
+  await requireAdmin();
+  const rows = await prisma.order.findMany({
+    where: { paymentStatus: { in: ["paid", "partially_refunded", "refunded"] } },
+    orderBy: [{ paidAt: "desc" }, { createdAt: "desc" }],
+    select: {
+      id: true,
+      userId: true,
+      userEmail: true,
+      service: true,
+      amount: true,
+      paymentStatus: true,
+      paidAt: true,
+      paymentRef: true,
+      createdAt: true
+    }
+  });
+
+  const statusRank = { paid: 0, partially_refunded: 1, refunded: 2 } as const;
+  const grouped = new Map<
+    string,
+    PaymentRecord & { paidAtValue: Date | null; createdAtValue: Date; statusRank: number }
+  >();
+
+  for (const row of rows) {
+    const status =
+      row.paymentStatus === "partially_refunded" || row.paymentStatus === "refunded"
+        ? row.paymentStatus
+        : "paid";
+    const key = row.paymentRef ?? `order:${row.id}`;
+    const current = grouped.get(key);
+
+    if (current) {
+      current.amount += Number(row.amount);
+      current.orderIds.push(row.id);
+      if (!current.products.includes(row.service)) current.products.push(row.service);
+      if (statusRank[status] > current.statusRank) {
+        current.status = status;
+        current.statusRank = statusRank[status];
+      }
+      continue;
+    }
+
+    grouped.set(key, {
+      id: key,
+      reference: row.paymentRef ?? undefined,
+      client: row.userEmail ?? `${row.userId.slice(0, 14)}…`,
+      userId: row.userId,
+      products: [row.service],
+      orderIds: [row.id],
+      amount: Number(row.amount),
+      paidAt: row.paidAt ? formatDateTime(row.paidAt) : "Payment date unavailable",
+      paidAtValue: row.paidAt,
+      createdAtValue: row.createdAt,
+      status,
+      statusRank: statusRank[status]
+    });
+  }
+
+  return [...grouped.values()]
+    .sort(
+      (a, b) =>
+        (b.paidAtValue?.getTime() ?? b.createdAtValue.getTime()) -
+        (a.paidAtValue?.getTime() ?? a.createdAtValue.getTime())
+    )
+    .map((payment) => ({
+      id: payment.id,
+      reference: payment.reference,
+      client: payment.client,
+      userId: payment.userId,
+      products: payment.products,
+      orderIds: payment.orderIds,
+      amount: payment.amount,
+      paidAt: payment.paidAt,
+      status: payment.status
+    }));
 }
 
 export async function getAdminOrder(id: string): Promise<AdminOrderDetail | undefined> {
