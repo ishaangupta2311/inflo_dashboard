@@ -28,7 +28,11 @@ model Order {
   orderedAt      DateTime  @default(now())
   dueAt          DateTime
   completedAt    DateTime?
-  amount         Int
+  // Stored currency amount (USD). Decimal precision is required for percentage
+  // discounts, e.g. 98% off $120 is a $2.40 charge.
+  amount         Decimal   @db.Decimal(10, 2)
+  discountCode String?
+  discountPercentage Int?
   progress       Int       @default(12)
   linkTotal      Int       @default(0) // total links ordered (Link Building); 0 for non-link orders
   linksDelivered Int       @default(0) // links with a publish URL — denormalized for cheap listing
@@ -59,8 +63,10 @@ model PayPalCheckout {
   userEmail      String?
   lines          Json
   brief          String?
-  expectedAmount Int
+  expectedAmount Decimal   @db.Decimal(10, 2)
   currency       String    @default("USD")
+  discountCode String?
+  discountPercentage Int?
   paypalOrderId  String?   @unique
   captureId      String?   @unique
   status         String    @default("pending")
@@ -72,6 +78,20 @@ model PayPalCheckout {
   @@index([userId])
   @@index([status])
   @@map("paypal_checkouts")
+}
+
+// Merchant-managed percentage discounts. The code is stored on the checkout
+// and created orders as a snapshot, so a later deactivation never changes an
+// amount the customer has already approved with PayPal.
+model DiscountCode {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  percentage Int
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("discount_codes")
 }
 
 // One row per individual link in a Link Building order. Clients edit anchor text

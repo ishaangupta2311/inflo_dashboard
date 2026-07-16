@@ -42,6 +42,8 @@ test("extracts approved order and refund capture identifiers", () => {
 
 test("requires both exact amount and matching currency", () => {
   assert.equal(capturedAmountMatches(125, "USD", "125.00", "USD"), true);
+  assert.equal(capturedAmountMatches(2.4, "USD", "2.40", "USD"), true);
+  assert.equal(capturedAmountMatches(63.65, "USD", "63.65", "USD"), true);
   assert.equal(capturedAmountMatches(125, "USD", "124.99", "USD"), false);
   assert.equal(capturedAmountMatches(125, "USD", "125.00", "EUR"), false);
   assert.equal(capturedAmountMatches(125, "USD", undefined, "USD"), false);

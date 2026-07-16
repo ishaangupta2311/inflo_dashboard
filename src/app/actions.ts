@@ -19,6 +19,7 @@ export type SaveLinksResult = { ok: true } | { ok: false; error: string };
 export async function checkoutAction(input: {
   lines: CartLine[];
   brief?: string;
+  discountCode?: string;
 }): Promise<CheckoutResult> {
   try {
     const orders = await createOrdersFromCart(input);

@@ -6,11 +6,12 @@ import { LayoutDashboard, Plus } from "lucide-react";
 import { CartButton } from "@/components/cart-button";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { SidebarNav } from "@/components/sidebar-nav";
-import { isStaff } from "@/lib/auth";
+import { isAdmin, isStaff } from "@/lib/auth";
 import { listRecentUpdatesForStaff, listRecentUpdatesForUser } from "@/lib/order-backend";
 
 export async function DashboardShell({ children }: { children: React.ReactNode }) {
   const staff = await isStaff();
+  const admin = staff && (await isAdmin());
   const user = await currentUser();
   const greetingName = user?.firstName?.trim();
   // Clients are notified of staff changes to their orders; staff are notified of
@@ -33,7 +34,7 @@ export async function DashboardShell({ children }: { children: React.ReactNode }
           />
         </Link>
 
-        <SidebarNav staff={staff} />
+        <SidebarNav staff={staff} admin={admin} />
 
         <div className="absolute inset-x-5 bottom-6 rounded-2xl border border-line bg-paper p-4">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-violet">

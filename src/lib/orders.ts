@@ -69,7 +69,8 @@ export const money = (amount: number) =>
   new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
-    maximumFractionDigits: 0
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   }).format(amount);
 
 export const categoryIcons: Record<Order["category"], ComponentType<{ className?: string }>> = {

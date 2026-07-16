@@ -44,7 +44,12 @@ function esc(value: string): string {
 }
 
 function money(amount: number): string {
-  return `$${amount.toLocaleString("en-US")}`;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(amount);
 }
 
 // Branded HTML wrapper matching the dashboard palette.

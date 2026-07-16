@@ -7,7 +7,7 @@ import {
 } from "@/lib/paypal";
 import {
   createOrdersFromCartForUser,
-  priceCart,
+  quoteCart,
   type CartLine
 } from "@/lib/order-backend";
 import { capturedAmountMatches } from "@/lib/paypal-webhook-event";
@@ -31,25 +31,28 @@ export async function preparePaypalCheckout(input: {
   userEmail?: string | null;
   lines: CartLine[];
   brief?: string;
+  discountCode?: string;
 }): Promise<{ paypalOrderId: string }> {
   const lines = cleanLines(input.lines);
-  const { amount, description } = priceCart(lines);
+  const quote = await quoteCart(lines, input.discountCode);
   const checkout = await prisma.payPalCheckout.create({
     data: {
       userId: input.userId,
       userEmail: input.userEmail,
       lines,
       brief: input.brief?.trim().slice(0, 4000) || null,
-      expectedAmount: amount,
-      currency: "USD"
+      expectedAmount: quote.amount,
+      currency: "USD",
+      discountCode: quote.discount?.code,
+      discountPercentage: quote.discount?.percentage
     }
   });
 
   try {
     const order = await createPaypalOrder({
-      amountValue: amount.toFixed(2),
+      amountValue: quote.amount.toFixed(2),
       currency: "USD",
-      description,
+      description: quote.description,
       customId: checkout.id
     });
     await prisma.payPalCheckout.update({
@@ -130,7 +133,7 @@ export async function finalizePaypalCheckout(input: {
   }
   if (
     !capturedAmountMatches(
-      checkout.expectedAmount,
+      Number(checkout.expectedAmount),
       checkout.currency,
       evidence.capturedValue,
       evidence.currency
@@ -170,6 +173,10 @@ export async function finalizePaypalCheckout(input: {
       {
         lines: storedLines(checkout.lines),
         brief: checkout.brief ?? undefined,
+        appliedDiscount:
+          checkout.discountCode && checkout.discountPercentage
+            ? { code: checkout.discountCode, percentage: checkout.discountPercentage }
+            : undefined,
         payment: { ref: input.paypalOrderId, paidAt }
       },
       { userId: checkout.userId, email: checkout.userEmail }

@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = (await req.json()) as { lines?: CartLine[]; brief?: string };
+    const body = (await req.json()) as { lines?: CartLine[]; brief?: string; discountCode?: string };
     const lines = Array.isArray(body.lines) ? body.lines : [];
     const user = await currentUser();
     const userEmail =
@@ -25,7 +25,8 @@ export async function POST(req: Request) {
       userId,
       userEmail,
       lines,
-      brief: body.brief
+      brief: body.brief,
+      discountCode: body.discountCode
     });
 
     return Response.json({ id: checkout.paypalOrderId });

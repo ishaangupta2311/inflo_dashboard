@@ -6,7 +6,7 @@ import { DashboardShell } from "@/components/dashboard-shell";
 import { OrderCard } from "@/components/order-card";
 import { isStaff } from "@/lib/auth";
 import { emptyDashboardData, getDashboardData } from "@/lib/order-backend";
-import { invoiceHref } from "@/lib/orders";
+import { invoiceHref, money } from "@/lib/orders";
 
 const statIcons = {
   violet: PackageCheck,
@@ -111,7 +111,7 @@ export default async function OrdersPage() {
                   <p className="text-sm text-muted">{order.id} · {order.category}</p>
                 </div>
                 <p className="text-sm text-muted">{order.dueAt}</p>
-                <p className="font-display text-xl font-black">${order.amount.toLocaleString()}</p>
+                <p className="font-display text-xl font-black">{money(order.amount)}</p>
                 {order.invoiceId ? (
                   <a
                     href={invoiceHref(order.invoiceId)}

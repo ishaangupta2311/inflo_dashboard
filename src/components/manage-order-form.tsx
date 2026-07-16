@@ -102,7 +102,7 @@ export function ManageOrderForm({
           <>
             <label className="block">
               <span className="mb-2 block text-sm font-black">Amount (USD)</span>
-              <input name="amount" type="number" min={0} defaultValue={amount} className={fieldClass} />
+              <input name="amount" type="number" min={0} step="0.01" defaultValue={amount} className={fieldClass} />
             </label>
 
             <label className="block">

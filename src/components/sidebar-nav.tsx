@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileText, Settings, ShoppingBag, Store } from "lucide-react";
+import { BadgePercent, FileText, Settings, ShoppingBag, Store } from "lucide-react";
 import type { ComponentType } from "react";
 
 type NavItem = {
@@ -12,7 +12,7 @@ type NavItem = {
   activePrefix?: string;
 };
 
-export function SidebarNav({ staff }: { staff: boolean }) {
+export function SidebarNav({ staff, admin }: { staff: boolean; admin: boolean }) {
   const pathname = usePathname();
 
   // Staff (admin / sub-admin / employee) get a management-only nav — no Store or
@@ -21,6 +21,9 @@ export function SidebarNav({ staff }: { staff: boolean }) {
   const items: NavItem[] = staff
     ? [
         { label: "Orders", href: "/admin", icon: ShoppingBag, activePrefix: "/admin" },
+        ...(admin
+          ? [{ label: "Discount codes", href: "/admin/discounts", icon: BadgePercent, activePrefix: "/admin/discounts" }]
+          : []),
         { label: "Settings", href: "/settings", icon: Settings, activePrefix: "/settings" }
       ]
     : [
@@ -30,10 +33,16 @@ export function SidebarNav({ staff }: { staff: boolean }) {
         { label: "Settings", href: "/settings", icon: Settings, activePrefix: "/settings" }
       ];
 
-  const isActive = (item: NavItem) =>
-    item.activePrefix
+  const isActive = (item: NavItem) => {
+    // /admin/discounts is its own workspace, not a selected order-management
+    // view, even though it shares the same admin route prefix.
+    if (item.href === "/admin") {
+      return pathname === "/admin" || pathname.startsWith("/admin/orders/");
+    }
+    return item.activePrefix
       ? pathname === item.activePrefix || pathname.startsWith(`${item.activePrefix}/`)
       : false;
+  };
 
   return (
     <nav className="mt-10 space-y-2">

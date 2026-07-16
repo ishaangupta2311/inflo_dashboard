@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { createDiscountCode, setDiscountCodeActive } from "@/lib/discount-code-backend";
 import {
   addOrderUpdate,
   updateOrder,
@@ -12,6 +13,7 @@ import {
 import type { OrderStatus } from "@/lib/orders";
 
 export type SaveLinksResult = { ok: true } | { ok: false; error: string };
+export type DiscountActionResult = { ok: true; message: string } | { ok: false; error: string };
 
 const STATUSES: OrderStatus[] = ["In Progress", "Completed"];
 
@@ -94,4 +96,28 @@ export async function postUpdateAction(formData: FormData) {
 
   await addOrderUpdate(orderId, body);
   revalidateOrder(orderId);
+}
+
+export async function createDiscountCodeAction(
+  _prev: DiscountActionResult | null,
+  formData: FormData
+): Promise<DiscountActionResult> {
+  try {
+    const discount = await createDiscountCode({
+      code: String(formData.get("code") || ""),
+      percentage: Number(formData.get("percentage") || 0)
+    });
+    revalidatePath("/admin/discounts");
+    return { ok: true, message: `${discount.code} is active at ${discount.percentage}% off.` };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Could not create discount code." };
+  }
+}
+
+export async function setDiscountCodeActiveAction(formData: FormData): Promise<void> {
+  await setDiscountCodeActive(
+    String(formData.get("discountCodeId") || ""),
+    String(formData.get("active") || "") === "true"
+  );
+  revalidatePath("/admin/discounts");
 }

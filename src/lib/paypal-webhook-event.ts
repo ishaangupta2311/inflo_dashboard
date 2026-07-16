@@ -53,9 +53,14 @@ export function capturedAmountMatches(
   const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(capturedValue.trim());
   if (!match) return false;
   const cents = Number(match[1]) * 100 + Number((match[2] ?? "").padEnd(2, "0"));
+  // expectedAmount is a two-decimal currency value. Compare integer cents so
+  // common binary floating-point representations (for example 63.65) cannot
+  // reject a valid PayPal capture.
+  const expectedCents = Math.round(expectedAmount * 100);
   return (
     Number.isSafeInteger(cents) &&
-    cents === expectedAmount * 100 &&
+    Number.isSafeInteger(expectedCents) &&
+    cents === expectedCents &&
     capturedCurrency.toUpperCase() === expectedCurrency.toUpperCase()
   );
 }

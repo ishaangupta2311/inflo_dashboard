@@ -49,6 +49,7 @@ export function PaypalCheckout({
   clientId,
   lines,
   brief,
+  discountCode,
   disabled,
   onPaid,
   onError
@@ -56,6 +57,7 @@ export function PaypalCheckout({
   clientId: string;
   lines: CartLine[];
   brief: string;
+  discountCode?: string;
   disabled?: boolean;
   onPaid: (count: number) => void;
   onError: (message: string) => void;
@@ -63,7 +65,7 @@ export function PaypalCheckout({
   const containerRef = useRef<HTMLDivElement>(null);
   // Keep the freshest cart + callbacks in refs so the (render-once) button
   // callbacks always read current values without re-rendering the buttons.
-  const dataRef = useRef({ lines, brief });
+  const dataRef = useRef({ lines, brief, discountCode, disabled });
   const cbRef = useRef({ onPaid, onError });
 
   const [ready, setReady] = useState(false);
@@ -71,7 +73,7 @@ export function PaypalCheckout({
 
   // Sync refs after each render (writing them during render is disallowed).
   useEffect(() => {
-    dataRef.current = { lines, brief };
+    dataRef.current = { lines, brief, discountCode, disabled };
     cbRef.current = { onPaid, onError };
   });
 
@@ -92,10 +94,17 @@ export function PaypalCheckout({
     const buttons = window.paypal.Buttons({
       style: { layout: "vertical", color: "gold", shape: "pill", label: "paypal", height: 48 },
       createOrder: async () => {
+        if (dataRef.current.disabled) {
+          throw new Error("Apply the discount code before checking out.");
+        }
         const res = await fetch("/api/paypal/create-order", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ lines: dataRef.current.lines, brief: dataRef.current.brief })
+          body: JSON.stringify({
+            lines: dataRef.current.lines,
+            brief: dataRef.current.brief,
+            discountCode: dataRef.current.discountCode
+          })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Could not start checkout.");

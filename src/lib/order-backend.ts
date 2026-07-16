@@ -4,7 +4,9 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/auth";
 import { catalogBySlug, findBuyable, type Buyable } from "@/lib/catalog";
-import { serviceOptions, type Order, type OrderStatus } from "@/lib/orders";
+import { discountedAmount, roundCurrency, type AppliedDiscount } from "@/lib/discount-code";
+import { resolveActiveDiscount } from "@/lib/discount-code-backend";
+import { money, serviceOptions, type Order, type OrderStatus } from "@/lib/orders";
 import {
   sendMessageEmail,
   sendOrderCompletedEmail,
@@ -59,7 +61,7 @@ function toOrder(row: OrderRow): Order {
     status: row.status as OrderStatus,
     orderedAt: formatDate(row.orderedAt),
     dueAt: formatDate(row.dueAt),
-    amount: row.amount,
+    amount: Number(row.amount),
     progress: row.progress,
     linkTotal: row.linkTotal,
     linksDelivered: row.linksDelivered,
@@ -237,7 +239,7 @@ async function buildInvoicePdf(row: OrderRow): Promise<Uint8Array> {
   page.drawLine({ start: { x: M, y }, end: { x: width - M, y }, thickness: 1, color: line });
 
   y -= 28;
-  const amount = `$${row.amount.toLocaleString("en-US")}`;
+  const amount = money(Number(row.amount));
   page.drawText(row.service, { x: M, y, size: 12, font: bold, color: ink });
   page.drawText(amount, { x: rightX(amount, 12), y, size: 12, font: bold, color: ink });
   y -= 17;
@@ -250,7 +252,7 @@ async function buildInvoicePdf(row: OrderRow): Promise<Uint8Array> {
   y -= 40;
   page.drawLine({ start: { x: width / 2, y: y + 16 }, end: { x: width - M, y: y + 16 }, thickness: 1, color: line });
   page.drawText("Total", { x: width / 2, y, size: 12, font: bold, color: muted });
-  const total = `$${row.amount.toLocaleString("en-US")}`;
+  const total = money(Number(row.amount));
   page.drawText(total, { x: rightX(total, 16), y: y - 2, size: 16, font: bold, color: ink });
 
   // Footer
@@ -302,7 +304,7 @@ function buildDashboardData(orders: Order[]): DashboardData {
     {
       label: "Completed orders",
       value: completedOrders.length.toString(),
-      detail: `$${completedOrders.reduce((sum, order) => sum + order.amount, 0).toLocaleString("en-US")} delivered`,
+      detail: `${money(completedOrders.reduce((sum, order) => sum + order.amount, 0))} delivered`,
       tone: "ink"
     },
     {
@@ -373,6 +375,12 @@ export type CheckoutInput = {
   lines: CartLine[];
   targetUrl?: string;
   brief?: string;
+  // Raw code supplied by a client-facing checkout. It is always resolved again
+  // on the server; the browser never submits a discount amount or percentage.
+  discountCode?: string;
+  // A server-owned snapshot for durable PayPal checkout recovery. Never accept
+  // this value from a client-facing action.
+  appliedDiscount?: AppliedDiscount;
   payment?: { ref: string; paidAt?: Date };
 };
 
@@ -407,11 +415,43 @@ export function priceCart(lines: CartLine[]): { amount: number; description: str
   return { amount, description: summariseLines(resolved) };
 }
 
+export type CartQuote = {
+  originalAmount: number;
+  amount: number;
+  discount?: AppliedDiscount;
+  description: string;
+};
+
+// Resolves a code and prices the cart in one server-side operation. This is
+// used for the checkout preview and again before a PayPal order is created.
+export async function quoteCart(lines: CartLine[], rawDiscountCode?: string): Promise<CartQuote> {
+  const priced = priceCart(lines);
+  const discount = await resolveActiveDiscount(rawDiscountCode);
+  return {
+    originalAmount: priced.amount,
+    amount: discount ? discountedAmount(priced.amount, discount.percentage) : priced.amount,
+    discount,
+    description: priced.description
+  };
+}
+
 export async function createOrdersFromCart(input: CheckoutInput) {
   noStore();
   const userId = await requireUserId();
   const email = await currentUserEmail();
-  return createOrdersFromCartForUser(input, { userId, email });
+  const appliedDiscount = await resolveActiveDiscount(input.discountCode);
+  // Deliberately reconstruct the input so a crafted Server Action payload
+  // cannot smuggle in its own percentage or price.
+  return createOrdersFromCartForUser(
+    {
+      lines: input.lines,
+      targetUrl: input.targetUrl,
+      brief: input.brief,
+      payment: input.payment,
+      appliedDiscount
+    },
+    { userId, email }
+  );
 }
 
 // Server-authenticated variant used by verified payment webhooks, which do not
@@ -455,6 +495,12 @@ export async function createOrdersFromCartForUser(
         paymentRef: input.payment.ref
       }
     : {};
+  const discountData = input.appliedDiscount
+    ? {
+        discountCode: input.appliedDiscount.code,
+        discountPercentage: input.appliedDiscount.percentage
+      }
+    : {};
 
   // One order per catalog service — all lines of the same service consolidate together.
   const groups = new Map<string, ResolvedLine[]>();
@@ -474,7 +520,10 @@ export async function createOrdersFromCartForUser(
   const created = await prisma.$transaction(
     [...groups.values()].map((lines) => {
       const service = lines[0].buyable.service;
-      const amount = lines.reduce((sum, { buyable, quantity }) => sum + buyable.price * quantity, 0);
+      const listAmount = lines.reduce((sum, { buyable, quantity }) => sum + buyable.price * quantity, 0);
+      const amount = input.appliedDiscount
+        ? discountedAmount(listAmount, input.appliedDiscount.percentage)
+        : listAmount;
       const billing = lines.some(({ buyable }) => buyable.billing === "monthly") ? "monthly" : "one_time";
       const packageId = lines.length === 1 ? lines[0].buyable.id : null;
       const dueAt = new Date(now);
@@ -508,6 +557,7 @@ export async function createOrdersFromCartForUser(
             targetUrl,
             deliverables: briefNote ? [briefNote] : [],
             owner: "Client Success",
+            ...discountData,
             ...paymentData,
             links: { create: linkRows }
           }
@@ -545,6 +595,7 @@ export async function createOrdersFromCartForUser(
               targetUrl,
               deliverables: briefNote ? [briefNote] : [],
               owner: "Client Success",
+              ...discountData,
               ...paymentData,
               prItems: { create: prRows }
             }
@@ -576,6 +627,7 @@ export async function createOrdersFromCartForUser(
             briefNote ?? "Order received by fulfilment team"
           ],
           owner: "Client Success",
+          ...discountData,
           ...paymentData
         }
       });
@@ -596,7 +648,12 @@ export async function createOrdersFromCartForUser(
 
   await sendOrderReceivedEmail({
     to: email,
-    orders: finalRows.map((o) => ({ id: o.id, service: o.service, amount: o.amount, billing: o.billing })),
+    orders: finalRows.map((o) => ({
+      id: o.id,
+      service: o.service,
+      amount: Number(o.amount),
+      billing: o.billing
+    })),
     paid: Boolean(input.payment)
   });
 
@@ -744,7 +801,7 @@ export async function acceptQuote(orderId: string): Promise<Order> {
       orderId,
       authorId: userId,
       authorName: clientName,
-      body: `Quote of $${updated.amount.toLocaleString("en-US")} accepted.`
+      body: `Quote of ${money(Number(updated.amount))} accepted.`
     }
   });
 
@@ -901,7 +958,7 @@ export async function updateOrder(orderId: string, input: OrderMutationInput): P
       ...(typeof input.progress === "number"
         ? { progress: Math.max(0, Math.min(100, Math.round(input.progress))) }
         : {}),
-      ...(typeof input.amount === "number" ? { amount: Math.max(0, Math.round(input.amount)) } : {}),
+      ...(typeof input.amount === "number" ? { amount: Math.max(0, roundCurrency(input.amount)) } : {}),
       ...(input.quoteStatus ? { quoteStatus: input.quoteStatus } : {}),
       ...(input.status ? { status: input.status } : {}),
       ...(completing

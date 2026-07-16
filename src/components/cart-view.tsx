@@ -3,7 +3,7 @@
 import { useCallback, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Lock, Minus, Plus, ShoppingCart, Target, Trash2 } from "lucide-react";
+import { ArrowRight, BadgePercent, Lock, Minus, Plus, ShoppingCart, Target, Trash2 } from "lucide-react";
 import { checkoutAction } from "@/app/actions";
 import { useCart, type CartItem } from "@/components/cart-context";
 import { PaypalCheckout } from "@/components/paypal-checkout";
@@ -14,23 +14,79 @@ import { money } from "@/lib/orders";
 // order is created. Without it, the free "place order, pay later" flow stays.
 const PAYPAL_CLIENT_ID = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 
+type DiscountPreview = {
+  code: string;
+  percentage: number;
+  amount: number;
+  cartSignature: string;
+};
+
 export function CartView() {
   const { items, subtotal, hasMonthly, hydrated, setQuantity, remove, clear } = useCart();
   const router = useRouter();
   const [brief, setBrief] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [discountCode, setDiscountCode] = useState("");
+  const [discount, setDiscount] = useState<DiscountPreview | null>(null);
+  const [discountError, setDiscountError] = useState<string | null>(null);
+  const [applyingDiscount, setApplyingDiscount] = useState(false);
   const [pending, startTransition] = useTransition();
   const paymentsOn = Boolean(PAYPAL_CLIENT_ID);
 
   const resolved = items
     .map((item) => ({ item, buyable: findBuyable(item.id) }))
     .filter((entry): entry is { item: CartItem; buyable: Buyable } => Boolean(entry.buyable));
+  const cartSignature = items.map((item) => `${item.id}:${item.quantity}`).join("|");
+  const normalizedInputCode = discountCode.trim().toUpperCase();
+  const currentDiscount =
+    discount?.cartSignature === cartSignature && discount.code === normalizedInputCode ? discount : null;
+  const discountNeedsApplying = Boolean(normalizedInputCode) && !currentDiscount;
+  const checkoutDisabled = !hydrated || resolved.length === 0 || discountNeedsApplying;
+  const total = currentDiscount ? currentDiscount.amount : subtotal;
+  const savings = currentDiscount ? subtotal - currentDiscount.amount : 0;
+
+  const applyDiscount = async () => {
+    if (!normalizedInputCode) {
+      setDiscount(null);
+      setDiscountError("Enter a discount code first.");
+      return;
+    }
+
+    setApplyingDiscount(true);
+    setDiscountError(null);
+    try {
+      const res = await fetch("/api/discounts/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lines: items, discountCode: normalizedInputCode })
+      });
+      const data = (await res.json()) as {
+        amount?: number;
+        discount?: { code: string; percentage: number };
+        error?: string;
+      };
+      if (!res.ok || !data.discount || typeof data.amount !== "number") {
+        throw new Error(data.error || "Could not apply discount code.");
+      }
+      setDiscountCode(data.discount.code);
+      setDiscount({ ...data.discount, amount: data.amount, cartSignature });
+    } catch (applyError) {
+      setDiscount(null);
+      setDiscountError(applyError instanceof Error ? applyError.message : "Could not apply discount code.");
+    } finally {
+      setApplyingDiscount(false);
+    }
+  };
 
   // Free fallback flow (no PayPal configured): create orders immediately.
   const checkout = () => {
     setError(null);
     startTransition(async () => {
-      const result = await checkoutAction({ lines: items, brief: brief.trim() });
+      const result = await checkoutAction({
+        lines: items,
+        brief: brief.trim(),
+        discountCode: currentDiscount?.code
+      });
       if (result.ok) {
         clear();
         router.push("/orders?created=cart");
@@ -133,6 +189,21 @@ export function CartView() {
           <span className="text-sm text-[#d9d5e2]">Subtotal</span>
           <span className="font-display text-2xl font-black">{money(subtotal)}</span>
         </div>
+        {currentDiscount ? (
+          <>
+            <div className="flex items-center justify-between border-b border-white/10 py-4">
+              <span className="flex items-center gap-2 text-sm font-bold text-lime">
+                <BadgePercent className="size-4" />
+                {currentDiscount.code} · {currentDiscount.percentage}% off
+              </span>
+              <span className="font-black text-lime">−{money(savings)}</span>
+            </div>
+            <div className="flex items-center justify-between pt-4">
+              <span className="text-sm font-black text-[#d9d5e2]">Total today</span>
+              <span className="font-display text-3xl font-black text-lime">{money(total)}</span>
+            </div>
+          </>
+        ) : null}
         {hasMonthly ? (
           <p className="mt-3 text-xs leading-5 text-[#bdb7c9]">
             {paymentsOn
@@ -142,6 +213,38 @@ export function CartView() {
         ) : null}
 
         <div className="mt-5 grid gap-4">
+          <label className="block">
+            <span className="mb-2 flex items-center gap-2 text-sm font-black">
+              <BadgePercent className="size-4 text-lime" />
+              Discount code <span className="font-normal text-[#bdb7c9]">(optional)</span>
+            </span>
+            <div className="flex gap-2">
+              <input
+                value={discountCode}
+                onChange={(event) => {
+                  setDiscountCode(event.target.value.toUpperCase());
+                  setDiscountError(null);
+                }}
+                maxLength={32}
+                autoCapitalize="characters"
+                placeholder="Enter code"
+                className="min-w-0 flex-1 rounded-xl border border-white/15 bg-white/8 px-4 py-3 font-mono text-sm font-bold tracking-[0.12em] text-paper outline-none transition placeholder:font-sans placeholder:font-normal placeholder:tracking-normal placeholder:text-[#9a93a8] focus:border-lime"
+              />
+              <button
+                type="button"
+                onClick={applyDiscount}
+                disabled={applyingDiscount || !hydrated}
+                className="rounded-xl bg-white/12 px-4 text-sm font-black text-paper transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {applyingDiscount ? "Checking…" : "Apply"}
+              </button>
+            </div>
+            {discountError ? <span className="mt-2 block text-xs font-bold text-[#ffb4a6]">{discountError}</span> : null}
+            {discountNeedsApplying && !discountError ? (
+              <span className="mt-2 block text-xs text-[#bdb7c9]">Apply this code to update the total before checkout.</span>
+            ) : null}
+          </label>
+
           <label className="block">
             <span className="mb-2 flex items-center gap-2 text-sm font-black">
               <Target className="size-4 text-lime" />
@@ -164,7 +267,8 @@ export function CartView() {
               clientId={PAYPAL_CLIENT_ID as string}
               lines={items}
               brief={brief.trim()}
-              disabled={!hydrated || resolved.length === 0}
+              discountCode={currentDiscount?.code}
+              disabled={checkoutDisabled}
               onPaid={handlePaid}
               onError={setError}
             />
@@ -178,7 +282,7 @@ export function CartView() {
             <button
               type="button"
               onClick={checkout}
-              disabled={pending || !hydrated}
+              disabled={pending || checkoutDisabled}
               className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-lime px-5 py-4 text-sm font-black text-lime-ink transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {pending ? "Placing order…" : "Place order"}
